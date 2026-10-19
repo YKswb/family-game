@@ -65,6 +65,7 @@ export type WorldEvent =
   | { type: 'squadWiped'; squad: Squad }
   | { type: 'recruit'; squad: Squad; waiting: boolean }
   | { type: 'reinforce'; from: Squad; count: number }
+  | { type: 'revive'; squad: Squad; x: number; y: number }
   | { type: 'order'; order: Order }
   | { type: 'whistle' }
   | { type: 'dialog'; key: string }
@@ -183,6 +184,7 @@ export class World {
     this.updateHero(dt);
     this.recallTime = Math.max(0, this.recallTime - dt);
     this.updateRecruit();
+    this.reviveWaiting(dt);
     updateFollowSquads(this);
     for (const sq of this.squads) if (sq.mode === 'hold') updateHoldSquad(this, sq, dt);
     this.markArcherLine();
@@ -342,6 +344,31 @@ export class World {
       } else {
         this.reinforceFrom(sq);
       }
+    }
+  }
+
+  /**
+   * 待機している部隊は、一定の間隔で兵士が1人ずつ戻ってくる（最初の人数まで）。
+   * 補充で空になった待機部隊も戻ってくるので、補充の拠点として何度も使える
+   */
+  private reviveWaiting(dt: number): void {
+    const interval = this.data.ai.waitingReviveSeconds;
+    for (const sq of this.squads) {
+      if (!sq.waiting || sq.kind === 'general') continue;
+      if (sq.aliveCount >= sq.capacity) {
+        sq.reviveTimer = 0;
+        continue;
+      }
+      sq.reviveTimer += dt;
+      if (sq.reviveTimer < interval) continue;
+      sq.reviveTimer -= interval;
+      const x = sq.postX + this.rng.range(-20, 20);
+      const y = sq.postY + this.rng.range(-20, 20);
+      const u = new Unit(this.nextId++, sq.kind, 'ally', this.data.kinds[sq.kind], x, y, sq, this.rng.next());
+      u.speed *= this.rng.range(0.93, 1.07);
+      sq.units.push(u);
+      this.units.push(u);
+      this.events.push({ type: 'revive', squad: sq, x, y });
     }
   }
 

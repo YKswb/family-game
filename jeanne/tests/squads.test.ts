@@ -128,6 +128,49 @@ describe('仲間化', () => {
     expect(avgForward(w, archers)).toBeLessThan(-60);
   });
 
+  it('待機の部隊は、一定の間隔で兵士が1人ずつ戻り、最初の人数で止まる', () => {
+    const w = withWaitingCavalry();
+    const cav = w.squads[3];
+    const interval = UNIT_DATA.ai.waitingReviveSeconds;
+    kill(w, 3, 7);
+    expect(cav.aliveCount).toBe(3);
+    wait(w, interval * 3 + 0.1);
+    expect(cav.aliveCount).toBe(6);
+    wait(w, interval * 10);
+    expect(cav.aliveCount).toBe(10);
+  });
+
+  it('補充で空になった待機部隊も、また戻ってくる', () => {
+    const w = withWaitingCavalry();
+    const cav = w.squads[3];
+    kill(w, 3, 10);
+    expect(cav.aliveCount).toBe(0);
+    wait(w, UNIT_DATA.ai.waitingReviveSeconds + 0.1);
+    expect(cav.aliveCount).toBe(1);
+    expect(cav.alive[0].kind).toBe('cavalry');
+  });
+
+  it('率いている部隊・旗の部隊・敵の部隊は、兵士が戻らない', () => {
+    const w = new World({
+      width: 3000,
+      height: 1000,
+      hero: { x: 100, y: 500 },
+      heroDir: [1, 0],
+      squads: [
+        flag('sword', 500, 500),
+        flag('spear', 1500, 500),
+        { side: 'enemy', mode: 'hold', kind: 'sword', count: 10, x: 2800, y: 900, dir: [-1, 0] },
+      ],
+    });
+    walkTo(w, 500, 500);
+    walkTo(w, 900, 500);
+    kill(w, 0, 3);
+    kill(w, 1, 3);
+    kill(w, 2, 3);
+    wait(w, UNIT_DATA.ai.waitingReviveSeconds * 4);
+    expect(w.squads.map((s) => s.aliveCount)).toEqual([7, 7, 7]);
+  });
+
   it('待機の兵士が余ったら、残りはその場で待機を続ける', () => {
     const w = withWaitingCavalry();
     const [sword, , , cav] = w.squads;

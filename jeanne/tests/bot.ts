@@ -159,6 +159,10 @@ export interface StageStats {
   dialogs: string[];
   /** 最後に、率いている兵士のうちジャンの近く（500以内）にいる割合 */
   nearHeroRatio: number;
+  /** 大将が気づいたときに率いていた兵士の数 */
+  followingAtBoss: number;
+  /** 待機部隊のそばにいたフレーム数（補充しに行った目安） */
+  refillFrames: number;
 }
 
 /**
@@ -166,6 +170,8 @@ export interface StageStats {
  * 川は橋を経由して渡る（ジャンの行き先にも地形の経路を使う）
  */
 export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats {
+  let refillsDone = 0;
+  let followingAtBoss = -1;
   const startX = w.hero.x;
   const startY = w.hero.y;
   let retreating = false;
@@ -191,6 +197,12 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
     // 旗の部隊と敵の部隊のうち、近い方から順に進む（敵の中を突っ切って旗を取りに行かない）
     const distTo = (s: typeof neutral) => (s ? Math.hypot(s.center().x - h.x, s.center().y - h.y) : Infinity);
     const recruitFirst = neutral !== null && distTo(neutral) <= distTo(foeSquad);
+    // 率いている兵士が半分を切ったら、兵士の戻った待機部隊へ補充しに行く
+    const following = w.followingSquads();
+    const have = following.reduce((n, s) => n + s.aliveCount, 0);
+    const cap = following.reduce((n, s) => n + s.capacity, 0) + (w.leadership - following.length) * 10;
+    const refill = have < cap * 0.5 ? nearestSquad(w, (s) => s.waiting && s.aliveCount >= 5) : null;
+    if (refill && Math.hypot(refill.center().x - h.x, refill.center().y - h.y) < 80) refillsDone++;
     if (retreating) {
       // 8方向のうち、敵からいちばん遠くなる場所へ下がって回復を待つ
       // （スタート地点まで戻ると時間がかかりすぎ、敵から真っすぐ離れると隅に追い詰められる）
@@ -209,6 +221,8 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
           ty = cy;
         }
       }
+    } else if (refill) {
+      ({ x: tx, y: ty } = refill.center());
     } else if (recruitFirst && neutral) {
       ({ x: tx, y: ty } = neutral.center());
     } else if (foeSquad) {
@@ -229,6 +243,7 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
 
     w.step(dt);
     for (const e of w.events) if (e.type === 'dialog') dialogs.push(e.key);
+    if (followingAtBoss < 0 && w.generalSquad?.alert) followingAtBoss = w.countFollowing();
 
     for (const u of w.units) {
       if (u.dead) continue;
@@ -240,7 +255,7 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
   const following = w.followingSquads().flatMap((s) => s.alive);
   const near = following.filter((u) => Math.hypot(u.x - w.hero.x, u.y - w.hero.y) < 500).length;
   const recruited = w.squads.filter((s) => s.side === 'ally' && (s.mode === 'follow' || s.waiting)).length;
-  return { seconds: w.time, broken, recruited, whistles, dialogs, nearHeroRatio: following.length ? near / following.length : 1 };
+  return { seconds: w.time, broken, recruited, whistles, dialogs, nearHeroRatio: following.length ? near / following.length : 1, followingAtBoss, refillFrames: refillsDone };
 }
 
 function nearestSquad(w: World, pred: (s: World['squads'][number]) => boolean): World['squads'][number] | null {

@@ -161,6 +161,8 @@ describe('ステージ1の自動プレイ', { timeout: 30000 }, () => {
     expect(w.outcome).toBe('won');
     expect(s.dialogs).toEqual(['start', 'mid', 'general', 'clear']);
     expect(s.recruited).toBeGreaterThanOrEqual(4);
+    // 待機の部隊から補充できるので、大将を倒すころにも仲間が残っている
+    expect(w.countFollowing()).toBeGreaterThan(0);
     // ボットは子どもより速いので、10分よりずっと短く終わる
     expect(s.seconds).toBeLessThan(600);
   });

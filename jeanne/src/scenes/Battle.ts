@@ -62,6 +62,8 @@ export class BattleScene extends Phaser.Scene {
   private paused = false;
   private pauseObjects: Phaser.GameObjects.GameObject[] = [];
   private resultScheduled = false;
+  /** 「たいきの なかまに さわると ほじゅう」の案内を次に出せるまでの秒数 */
+  private refillHintCooldown = 0;
   private allyKind: SoldierKind = 'sword';
   private enemyKind: SoldierKind = 'spear';
 
@@ -95,6 +97,7 @@ export class BattleScene extends Phaser.Scene {
     this.paused = false;
     this.pauseObjects = [];
     this.resultScheduled = false;
+    this.refillHintCooldown = 0;
     this.allyKind = data.allyKind ?? this.allyKind;
     this.enemyKind = data.enemyKind ?? this.enemyKind;
     this.labels = new Map();
@@ -165,6 +168,7 @@ export class BattleScene extends Phaser.Scene {
       w.input = this.readInput();
       w.step(dt);
       for (const e of w.events) this.onEvent(e);
+      this.maybeShowRefillHint(dt);
     }
     // 勝ち負けが決まったら、会話（クリアの会話など）が終わってから結果を出す
     if (w.outcome !== 'playing' && !this.dialog.open && !this.resultScheduled) {
@@ -337,6 +341,9 @@ export class BattleScene extends Phaser.Scene {
       case 'guarded':
         if (rng.next() < 0.15) this.popup(e.x, e.y - 90, TEXT.guarded, '#ffe066');
         break;
+      case 'revive':
+        this.burst(e.x, e.y - 14, 0x9fc3ff, 10, 120, 4);
+        break;
       case 'reinforce': {
         this.showBanner(fmt(TEXT.reinforced, { n: e.count }), '#ffd84d');
         const c = this.world.hero;
@@ -344,6 +351,22 @@ export class BattleScene extends Phaser.Scene {
         break;
       }
     }
+  }
+
+  /**
+   * 率いている兵士が半分を切り、兵士のいる待機部隊があるときに、補充できることを知らせる
+   * （一度出したら1分は出さない）
+   */
+  private maybeShowRefillHint(dt: number): void {
+    const w = this.world;
+    this.refillHintCooldown = Math.max(0, this.refillHintCooldown - dt);
+    if (this.refillHintCooldown > 0) return;
+    const following = w.followingSquads();
+    const cap = following.reduce((n, s) => n + s.capacity, 0);
+    if (following.length === 0 || w.countFollowing() >= cap * 0.5) return;
+    if (!w.squads.some((s) => s.waiting && s.aliveCount >= 5)) return;
+    this.showBanner(TEXT.refillHint, '#d6e4ff', 30);
+    this.refillHintCooldown = 60;
   }
 
   private showBanner(s: string, color: string, size = 40): void {

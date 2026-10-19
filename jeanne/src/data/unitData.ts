@@ -98,6 +98,8 @@ export interface UnitData {
     headingTurnRate: number;
     /** 巡回の速さ（ステージで指定がないとき） */
     patrolSpeed: number;
+    /** 待機している部隊に、兵士が1人戻ってくるまでの秒数 */
+    waitingReviveSeconds: number;
   };
 }
 

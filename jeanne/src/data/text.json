@@ -22,6 +22,7 @@
   "recruited": "{name}が なかまに なった！",
   "recruitedWaiting": "{name}は ここで まっている",
   "reinforced": "なかまが {n}人 くわわった！",
+  "refillHint": "たいきの なかまに さわると ほじゅう できるよ",
   "orderCharge": "とつげき",
   "orderGather": "しゅうごう",
   "orderLabel": "めいれい：{order}",
