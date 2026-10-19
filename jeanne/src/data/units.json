@@ -111,6 +111,9 @@
     "enemyEngageRadius": 420,
     "enemyChaseRadius": 560,
     "heroTargetPenalty": 45,
+    "retargetSwitchMargin": 20,
+    "maxAttackersOnHero": 4,
+    "maxAttackersOnSoldier": 3,
     "formationSpacing": 22,
     "formationColumns": 5,
     "formation": {

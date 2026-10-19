@@ -67,6 +67,11 @@ export interface UnitData {
     enemyEngageRadius: number;
     enemyChaseRadius: number;
     heroTargetPenalty: number;
+    /** 今の相手よりこれだけ近い相手がいれば狙いを乗り換える */
+    retargetSwitchMargin: number;
+    /** 1人の相手に同時に斬りかかれる近接の人数 */
+    maxAttackersOnHero: number;
+    maxAttackersOnSoldier: number;
     formationSpacing: number;
     formationColumns: number;
     /** ジャンの隊列。兵種ごとの列と、列の中の位置（[横, 後ろ]。後ろがマイナスならジャンより前） */

@@ -86,7 +86,7 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
   // 離れすぎたら戦いをやめて戻る（しばらく目標を選び直さない）
   if (u.target && (u.target.dead || fromAnchor > e.leash)) {
     const tooFar = !u.target.dead;
-    u.target = null;
+    w.setTarget(u, null);
     if (tooFar) u.retargetIn = Math.max(u.retargetIn, 0.6);
   }
 
@@ -94,9 +94,21 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
   u.retargetIn -= dt;
   if (u.retargetIn <= 0) {
     u.retargetIn = ai.retargetInterval;
-    const cur = u.target;
-    const keep = cur && !cur.dead && dist(u.x, u.y, cur.x, cur.y) < e.engage + 80;
-    if (!keep) u.target = e.engage > 0 && fromAnchor <= e.leash ? w.nearestFoe(u.side, u.x, u.y, e.engage) : null;
+    if (e.engage > 0 && fromAnchor <= e.leash) {
+      const cur = u.target;
+      const near = w.nearestFoe(u.side, u.x, u.y, e.engage, u);
+      const keep = cur && !cur.dead && dist(u.x, u.y, cur.x, cur.y) < e.engage + 80;
+      // 今の相手を追い続けるが、それよりはっきり近い相手が来たら乗り換える。
+      // 今の相手に斬りかかる人数が上限を超えていたら、空いている相手に回る
+      if (!keep) w.setTarget(u, near);
+      else if (near && near !== cur) {
+        const closer = w.targetDistance(u.x, u.y, near) + ai.retargetSwitchMargin < w.targetDistance(u.x, u.y, cur);
+        const crowded = !u.isRanged && cur.attackers > w.maxAttackers(cur) && near.attackers < w.maxAttackers(near);
+        if (closer || crowded) w.setTarget(u, near);
+      }
+    } else {
+      w.setTarget(u, null);
+    }
   }
 
   const t = u.target;
@@ -132,7 +144,7 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
       }
     }
   } else {
-    u.target = null;
+    w.setTarget(u, null);
     const d = dist(u.x, u.y, u.slotX, u.slotY);
     let speed: number;
     if (sq.mode === 'follow') {

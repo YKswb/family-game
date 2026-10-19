@@ -21,6 +21,8 @@ export class Unit {
   /** 次に攻撃できるまでの秒数 */
   cooldown: number;
   target: Unit | null = null;
+  /** この兵士に斬りかかっている近接の敵の人数（World.setTarget が数える） */
+  attackers = 0;
   /** 次に目標を選び直すまでの秒数 */
   retargetIn: number;
 

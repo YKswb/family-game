@@ -156,19 +156,52 @@ export class World {
    * (x, y) から radius 以内で一番近い、side 以外の陣営のユニット。
    * ジャンは少し遠い扱いにして、兵士が先に兵士を狙うようにする
    */
-  nearestFoe(side: Side, x: number, y: number, radius: number): Unit | null {
-    const penalty = this.data.ai.heroTargetPenalty;
+  nearestFoe(side: Side, x: number, y: number, radius: number, self?: Unit): Unit | null {
+    // self（近接）を渡したときは、すでに斬りかかる人数が上限に達した相手を避ける。
+    // 上限内の相手が見つからなければ、上限を無視して一番近い相手にする
+    const limitFor = self && !self.isRanged ? self : null;
     let best: Unit | null = null;
     let bestD = radius;
+    let any: Unit | null = null;
+    let anyD = radius;
     this.grid.forEachNear(x, y, radius + 20, (o) => {
       if (o.dead || o.side === side) return;
-      const d = dist(x, y, o.x, o.y) - o.radius + (o.kind === 'hero' ? penalty : 0);
+      const d = this.targetDistance(x, y, o);
+      if (d < anyD) {
+        anyD = d;
+        any = o;
+      }
+      if (limitFor) {
+        // 自分の今の相手なら自分の分を差し引いて数える
+        const others = o.attackers - (limitFor.target === o ? 1 : 0);
+        if (others >= this.maxAttackers(o)) return;
+      }
       if (d < bestD) {
         bestD = d;
         best = o;
       }
     });
-    return best;
+    return best ?? any;
+  }
+
+  /** 1人の相手に同時に斬りかかれる人数（ジャンが全員に囲まれないように） */
+  maxAttackers(o: Unit): number {
+    return o.kind === 'hero' ? this.data.ai.maxAttackersOnHero : this.data.ai.maxAttackersOnSoldier;
+  }
+
+  /** u の狙いを t に変え、斬りかかっている人数を数え直す（近接だけ数える） */
+  setTarget(u: Unit, t: Unit | null): void {
+    if (u.target === t) return;
+    if (!u.isRanged) {
+      if (u.target) u.target.attackers--;
+      if (t) t.attackers++;
+    }
+    u.target = t;
+  }
+
+  /** 狙う相手を選ぶときの距離（体の大きさを引き、ジャンは少し遠い扱い） */
+  targetDistance(x: number, y: number, o: Unit): number {
+    return dist(x, y, o.x, o.y) - o.radius + (o.kind === 'hero' ? this.data.ai.heroTargetPenalty : 0);
   }
 
   /** attacker の一撃（近接・矢の両方）を target に当てる */
@@ -213,7 +246,7 @@ export class World {
   private kill(u: Unit): void {
     u.dead = true;
     u.hp = 0;
-    u.target = null;
+    this.setTarget(u, null);
     this.events.push({ type: 'death', x: u.x, y: u.y, side: u.side, kind: u.kind });
     if (u.squad && u.squad.aliveCount === 0) this.events.push({ type: 'squadWiped', squad: u.squad });
   }

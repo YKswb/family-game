@@ -14,7 +14,7 @@ export interface PlayStats {
  * ヘッドレス自動プレイのボット。ジャンを敵の中心へ向かわせ、
  * HPが減ったら下がって回復を待つ
  */
-export function runBot(w: World, maxSeconds = 180, dt = 1 / 60): PlayStats {
+export function runBot(w: World, maxSeconds = 180, dt = 1 / 60, onStep?: () => void): PlayStats {
   const startX = w.hero.x;
   const startY = w.hero.y;
   let retreating = false;
@@ -46,6 +46,7 @@ export function runBot(w: World, maxSeconds = 180, dt = 1 / 60): PlayStats {
     w.input = d > stopAt ? { x: dx / d, y: dy / d } : { x: 0, y: 0 };
 
     w.step(dt);
+    onStep?.();
 
     for (const u of w.units) {
       if (u.dead) continue;
