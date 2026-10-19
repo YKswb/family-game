@@ -166,11 +166,16 @@ export class BattleScene extends Phaser.Scene {
     const w = this.world;
     const g = this.unitGfx;
     g.clear();
-    const view = this.cameras.main.worldView;
+    // カメラは左上を原点に拡大しているので、Phaser の worldView（中心基準）は使わず、見えている範囲を自分で求める
+    const cam = this.cameras.main;
+    const x0 = cam.scrollX - 60;
+    const y0 = cam.scrollY - 60;
+    const x1 = cam.scrollX + VIEW_W / WORLD_ZOOM + 60;
+    const y1 = cam.scrollY + VIEW_H / WORLD_ZOOM + 80;
     const alive: Unit[] = [];
     for (const u of w.units) {
       if (u.dead) continue;
-      if (u.x < view.x - 60 || u.x > view.right + 60 || u.y < view.y - 60 || u.y > view.bottom + 80) continue;
+      if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
       alive.push(u);
     }
     alive.sort((a, b) => a.y - b.y);
