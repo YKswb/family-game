@@ -5,5 +5,15 @@
   "chopRange": 62,
   "chopIntervals": [0.42, 0.32, 0.24, 0.17],
   "houseClearance": 12,
-  "territoryMargin": 16
+  "territoryMargin": 16,
+  "attackRange": 70,
+  "attackInterval": 0.42,
+  "attackDamage": 1,
+  "axeBonusLevel": 2,
+  "axeBonusDamage": 1,
+  "areaRange": 75,
+  "magnetRange": 75,
+  "pickupRange": 18,
+  "dropDelay": 0.4,
+  "dropLife": 40
 }

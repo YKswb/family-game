@@ -1,0 +1,32 @@
+{
+  "common": {
+    "spawnDistance": 660,
+    "spawnSpread": 0.45,
+    "attackInterval": 1.1,
+    "firstAttackDelay": 0.5,
+    "knockback": 170,
+    "knockbackArmor": 80,
+    "knockbackBoss": 30,
+    "knockbackDecay": 0.003,
+    "slowFactor": 0.5,
+    "summonFirst": 5,
+    "summonInterval": 7,
+    "summonCount": 2,
+    "summonKind": "slime",
+    "splitKind": "mini",
+    "splitCount": 2,
+    "armorReduction": 0.5,
+    "speedJitter": 0.1
+  },
+  "kinds": {
+    "slime": { "name": "スライム", "hp": 3, "speed": 40, "r": 16, "dmg": 1, "color": "#9b7bf2", "xp": 1, "drop": 1 },
+    "mini": { "name": "こスライム", "hp": 1.5, "speed": 50, "r": 11, "dmg": 1, "color": "#b9a2f7", "xp": 1, "drop": 0 },
+    "goblin": { "name": "ゴブリン", "hp": 7, "speed": 50, "r": 19, "dmg": 2, "color": "#5cb85c", "xp": 2, "drop": 2 },
+    "bat": { "name": "こうもり", "hp": 2, "speed": 66, "r": 13, "dmg": 1, "color": "#5b3f8f", "xp": 1, "drop": 1, "fly": true },
+    "wolf": { "name": "オオカミ", "hp": 4, "speed": 88, "r": 15, "dmg": 1, "color": "#8d96a3", "xp": 2, "drop": 1 },
+    "knight": { "name": "よろいの騎士", "hp": 10, "speed": 34, "r": 19, "dmg": 2, "color": "#7d8aa0", "xp": 3, "drop": 3, "armor": true },
+    "splitter": { "name": "分かれるスライム", "hp": 8, "speed": 34, "r": 24, "dmg": 2, "color": "#e07ad0", "xp": 2, "drop": 1, "split": true },
+    "boss": { "name": "ボス", "hp": 45, "speed": 24, "r": 40, "dmg": 4, "color": "#e0457b", "xp": 15, "drop": 10, "boss": true },
+    "maou": { "name": "まおう", "hp": 160, "speed": 20, "r": 48, "dmg": 6, "color": "#4a2a6a", "xp": 30, "drop": 20, "boss": true, "summon": true }
+  }
+}

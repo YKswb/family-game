@@ -4,6 +4,15 @@
   "payInterval": 0.065,
   "kinds": {
     "axe": { "costs": [12, 20, 30] },
-    "bag": { "costs": [8, 15, 24], "capacityPerLevel": 12 }
+    "bag": { "costs": [8, 15, 24], "capacityPerLevel": 12 },
+    "tower": { "costs": [10, 18, 28] },
+    "wall": { "costs": [6, 12], "hp": [12, 30] },
+    "land": { "costs": [20, 35] }
+  },
+  "wall": {
+    "radius": 215,
+    "sectors": 8,
+    "postsPerSector": 7,
+    "thickness": 13
   }
 }

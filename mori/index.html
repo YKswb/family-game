@@ -12,18 +12,56 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>もりの まもりびと</title>
 <style>
+  :root {
+    --panel: #eefbe3; --ink: #1f4a22; --sub: #4f7a46; --btn: #ffcc1f; --btn-d: #d99a00; --btn-ink: #3a2a00; --chip: rgba(80, 160, 60, .14);
+    --font: "Hiragino Maru Gothic ProN", "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+  }
   html, body { margin: 0; height: 100%; background: #3d7431; overflow: hidden; }
-  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; -webkit-tap-highlight-color: transparent;
+    font-family: var(--font); font-weight: 800; color: var(--ink); }
   #game { position: fixed; inset: 0; }
   #game canvas { display: block; }
   /* セーフエリアの大きさを読み取るためだけの見えない箱 */
   #safe { position: fixed; inset: 0; visibility: hidden; pointer-events: none;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+  /* 画面に重ねるボタン */
+  .hudbtn { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right));
+    width: 54px; height: 54px; border-radius: 16px; border: none; background: rgba(0, 0, 0, .3); color: #fff; font-size: 24px; cursor: pointer; }
+  #callnow { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom));
+    font: inherit; font-size: 18px; padding: 13px 20px; border: none; border-radius: 18px;
+    background: var(--btn); color: var(--btn-ink); box-shadow: 0 5px 0 var(--btn-d); cursor: pointer; }
+  #callnow:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--btn-d); }
+  .hide { display: none !important; }
+
+  /* 選択・ひとやすみ・結果の画面 */
+  #ov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 35, 12, .55);
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+  .card { background: var(--panel); color: var(--ink); border-radius: 30px; padding: 26px 22px 24px; max-width: 480px; width: 100%;
+    text-align: center; box-shadow: 0 10px 0 rgba(0, 0, 0, .22); max-height: 100%; overflow: auto; touch-action: pan-y; box-sizing: border-box; }
+  .title { font-size: clamp(28px, 7vw, 40px); margin: 0 0 6px; letter-spacing: .04em; }
+  .lead { font-size: 18px; line-height: 1.7; margin: 0 0 14px; }
+  .btns { display: grid; gap: 12px; justify-items: center; margin-top: 8px; }
+  .btn { font: inherit; font-size: 23px; color: var(--btn-ink); background: var(--btn); border: none; border-radius: 22px;
+    padding: 14px 40px; box-shadow: 0 6px 0 var(--btn-d); cursor: pointer; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--btn-d); }
+  .stars { font-size: 52px; letter-spacing: 8px; margin: 6px 0 10px; color: #ffb400; }
+  .opts { display: grid; gap: 10px; margin: 12px 0 4px; }
+  .opt { font: inherit; display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; border: none; border-radius: 18px;
+    background: var(--chip); color: var(--ink); text-align: left; cursor: pointer; }
+  .opt:active { transform: scale(.98); }
+  .opt b { font-size: 34px; line-height: 1; flex: none; }
+  .opt .name { font-size: 19px; display: block; }
+  .opt .desc { font-size: 14px; color: var(--sub); display: block; margin-top: 2px; line-height: 1.5; font-weight: 700; }
+  .hudbtn:focus-visible, .btn:focus-visible, .opt:focus-visible, #callnow:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 </style>
 </head>
 <body>
   <div id="safe"></div>
   <div id="game"></div>
+  <button id="pause" class="hudbtn hide" aria-label="ひとやすみ">⏸</button>
+  <button id="callnow" class="hide"></button>
+  <div id="ov" class="hide"><div class="card" id="card"></div></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

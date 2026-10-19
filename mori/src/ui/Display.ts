@@ -44,6 +44,11 @@ export const FONT = '"Hiragino Maru Gothic ProN", "M PLUS Rounded 1c", "Hiragino
 
 export const TEXT = textData as Record<keyof typeof textData, string>;
 
+/** "ウェーブ {n} / {max}" のような文の差し込み */
+export function fmt(s: string, vars: Record<string, string | number>): string {
+  return s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
+}
+
 export function textStyle(size: number, color = '#ffffff', stroke = true): Phaser.Types.GameObjects.Text.TextStyle {
   return {
     fontFamily: FONT,

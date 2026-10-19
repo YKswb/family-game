@@ -3,15 +3,24 @@ import { STAGES } from '../src/data/gameData';
 import { World } from '../src/systems/World';
 import { runBot } from './bot';
 
+const SEEDS = [1, 2, 3, 42, 777];
+
 describe('ステージ1の自動プレイ（ボットが主人公を動かす）', () => {
-  it.each([1, 2, 3, 42, 777])('種 %i：木を集めて、おのとかばんを最大まで建てられる', (seed) => {
-    const w = new World(STAGES[0], { seed });
-    const s = runBot(w, 300);
+  it.each(SEEDS)('ふつう・種 %i：最後のウェーブまで守りきれる', (seed) => {
+    const w = new World(STAGES[0], { seed, difficulty: 1 });
+    const s = runBot(w);
     expect(s.broken).toBeNull();
     expect(s.overCapacity).toBe(false);
-    expect(w.spots.every((sp) => sp.maxed)).toBe(true);
-    expect(w.tutorial).toBe('done');
-    // 合計109本の木材。今の版と同じくらいの手間で建てきれること
-    expect(s.seconds).toBeLessThan(240);
+    expect(w.outcome).toBe('won');
+    expect(w.wave).toBe(STAGES[0].waves.count);
+    expect(w.stars).toBeGreaterThanOrEqual(2);
+    expect(s.choices).toBeGreaterThan(0);
+  });
+
+  it.each([0, 2])('難易度 %i でも最後まで通せる', (difficulty) => {
+    const w = new World(STAGES[0], { seed: 5, difficulty });
+    const s = runBot(w);
+    expect(s.broken).toBeNull();
+    expect(w.outcome).toBe('won');
   });
 });

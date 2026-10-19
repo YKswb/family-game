@@ -1,0 +1,5 @@
+[
+  { "name": "かんたん", "enemyHp": 0.75, "enemyCount": 0.8, "enemySpeed": 0.95, "houseHp": 40, "firstPrep": 40, "gap": 22 },
+  { "name": "ふつう", "enemyHp": 1, "enemyCount": 1, "enemySpeed": 1, "houseHp": 30, "firstPrep": 30, "gap": 18 },
+  { "name": "むずかしい", "enemyHp": 1.35, "enemyCount": 1.25, "enemySpeed": 1.08, "houseHp": 25, "firstPrep": 25, "gap": 15 }
+]

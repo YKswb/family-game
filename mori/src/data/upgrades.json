@@ -1,0 +1,15 @@
+{
+  "xp": { "base": 6, "perLevel": 4, "fellTree": 1, "callNowSecondsPerXp": 4 },
+  "perks": [
+    { "id": "pdmg", "icon": "⚔️", "name": "こうげき アップ", "desc": "じぶんの こうげきが +1", "max": 4, "stat": "attack", "add": 1 },
+    { "id": "chop", "icon": "🪓", "name": "はやぎり", "desc": "木を切る はやさ 25% アップ", "max": 3, "stat": "chop", "mul": 0.8 },
+    { "id": "speed", "icon": "👟", "name": "はやあし", "desc": "歩く はやさ アップ", "max": 3, "stat": "speed", "add": 0.12 },
+    { "id": "bag", "icon": "🎒", "name": "大きな ふくろ", "desc": "持てる 木材 +10", "max": 3, "stat": "capacity", "add": 10 },
+    { "id": "magnet", "icon": "🧲", "name": "じしゃく", "desc": "落ちた 木材を 遠くから すいよせる", "max": 2, "stat": "magnet", "add": 0.7 },
+    { "id": "tdmg", "icon": "🏹", "name": "とうの 力", "desc": "全部の とうの こうげき 25% アップ", "max": 4, "stat": "towerDamage", "add": 0.25 },
+    { "id": "whp", "icon": "🧱", "name": "がんじょうな かべ", "desc": "かべの 強さ 50% アップ", "max": 3, "stat": "wallHp", "add": 0.5 },
+    { "id": "heal", "icon": "💖", "name": "おうちを 直す", "desc": "おうちの HP +15（さいだいも +5）", "max": 99, "stat": "heal", "add": 15, "maxAdd": 5 },
+    { "id": "area", "icon": "🌀", "name": "かいてん ぎり", "desc": "まわりの 敵 全部に こうげき", "max": 1, "stat": "area", "add": 1 },
+    { "id": "dbl", "icon": "🍀", "name": "ラッキー", "desc": "木を切ると ときどき 木材 2ばい", "max": 2, "stat": "lucky", "add": 0.3 }
+  ]
+}

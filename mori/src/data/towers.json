@@ -1,0 +1,45 @@
+{
+  "muzzleHeight": 84,
+  "shotSpeed": 560,
+  "shotLife": 1.5,
+  "shellTime": 0.6,
+  "firstShotDelay": 0.3,
+  "iceAvoidSlowed": 120,
+  "kinds": {
+    "arrow": {
+      "icon": "🏹",
+      "name": "矢のとう",
+      "short": "矢",
+      "desc": "空の敵にも当たる。はやく うつ",
+      "color": "#3d7be0",
+      "range": [190, 215, 245],
+      "interval": [1.0, 0.72, 0.5],
+      "damage": [1, 1.3, 2],
+      "air": true
+    },
+    "cannon": {
+      "icon": "💣",
+      "name": "大ほうのとう",
+      "short": "大ほう",
+      "desc": "まとめて ドカン！ よろいにも強い。空には とどかない",
+      "color": "#5b6370",
+      "range": [170, 190, 215],
+      "interval": [1.9, 1.6, 1.3],
+      "damage": [3, 4.5, 6.5],
+      "air": false,
+      "splash": [50, 58, 66]
+    },
+    "ice": {
+      "icon": "❄️",
+      "name": "氷のとう",
+      "short": "氷",
+      "desc": "敵を おそくする。かべと組み合わせると強い",
+      "color": "#6cc8f0",
+      "range": [180, 200, 225],
+      "interval": [1.2, 1.0, 0.8],
+      "damage": [0.5, 0.7, 1],
+      "air": true,
+      "slow": [1.8, 2.4, 3]
+    }
+  }
+}
