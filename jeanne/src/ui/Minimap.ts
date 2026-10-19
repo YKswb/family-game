@@ -47,6 +47,9 @@ export class Minimap {
       g.fillStyle(color, 1);
       g.fillRect(px(u.x) - 1, py(u.y) - 1, 2.4, 2.4);
     }
+    // 待機している仲間の場所（空でも）に、薄い青の輪をつける
+    g.lineStyle(2, 0x9fc3ff, 1);
+    for (const sq of world.squads) if (sq.waiting) g.strokeCircle(px(sq.postX), py(sq.postY), 6);
     // 旗の部隊は目立つ印をつける
     for (const sq of world.squads) {
       if (sq.mode !== 'neutral' || sq.aliveCount === 0) continue;

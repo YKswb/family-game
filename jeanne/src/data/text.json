@@ -24,6 +24,8 @@
   "reinforced": "なかまが {n}人 くわわった！",
   "refillHint": "たいきの なかまに さわると ほじゅう できるよ",
   "depotEmpty": "この たいきの なかまは まだ もどっていない\nすこし まってから また さわろう",
+  "returnedHome": "{name}は もとの ばしょに もどって\nふっかつを まっている",
+  "noSquadsHint": "なかまが いない！\nみずいろの たいきの なかまに さわろう（ミニマップにも でているよ）",
   "orderCharge": "とつげき",
   "orderGather": "しゅうごう",
   "orderLabel": "めいれい：{order}",

@@ -254,6 +254,38 @@ describe('仲間化', () => {
     expect(enemy.units.some((u) => u.target)).toBe(false);
   });
 
+  it('率いていた部隊が全滅すると、仲間にした場所に待機として戻り、少しずつ復活して、触れるとまた率いられる', () => {
+    const w = withWaitingCavalry();
+    const sword = w.squads[0];
+    walkTo(w, 2500, 500);
+    kill(w, 0, 10);
+    w.step(DT);
+    expect(w.events).toContainEqual({ type: 'returnedHome', squad: sword });
+    expect(sword.waiting).toBe(true);
+    expect(sword.mode).toBe('hold');
+    expect([sword.postX, sword.postY]).toEqual([500, 500]);
+    expect(w.followingSquads()).toHaveLength(2);
+    wait(w, UNIT_DATA.ai.waitingReviveSeconds * 4 + 0.1);
+    expect(sword.aliveCount).toBe(4);
+    expect(sword.alive.every((u) => u.kind === 'sword')).toBe(true);
+    // 元の場所へ戻って触れると、また率いられる（率いている部隊が2つなので空きがある）。
+    // 途中で騎馬の待機部隊に触れないよう、南を回って行く
+    walkTo(w, 2500, 900);
+    walkTo(w, 500, 900);
+    walkTo(w, 500, 500);
+    expect(sword.mode).toBe('follow');
+    expect(w.followingSquads()).toHaveLength(3);
+  });
+
+  it('率いている部隊が全滅しても、ステージの待機部隊が0にはならない（スクリーンショットの「ぶたい 0/3」の場面）', () => {
+    const w = withWaitingCavalry();
+    walkTo(w, 2500, 500);
+    for (let i = 0; i < 3; i++) kill(w, i, 10);
+    w.step(DT);
+    expect(w.followingSquads()).toHaveLength(0);
+    expect(w.squads.filter((s) => s.waiting)).toHaveLength(4);
+  });
+
   it('率いている部隊・旗の部隊・敵の部隊は、兵士が戻らない', () => {
     const w = new World({
       width: 3000,
@@ -383,7 +415,8 @@ describe('部隊の練習場の自動プレイ', { timeout: 30000 }, () => {
     expect(s.broken).toBeNull();
     expect(w.outcome).toBe('won');
     expect(s.recruited).toBe(5);
-    expect(w.squads.filter((q) => q.waiting)).toHaveLength(5 - w.leadership);
+    // 統率を超えた旗の部隊に加えて、全滅した部隊も元の場所で待機に戻る
+    expect(w.squads.filter((q) => q.waiting).length).toBeGreaterThanOrEqual(5 - w.leadership);
     expect(s.maxArcherAheadSteady).toBeLessThanOrEqual(0);
   });
 });

@@ -67,6 +67,7 @@ export type WorldEvent =
   | { type: 'reinforce'; from: Squad; count: number }
   | { type: 'revive'; squad: Squad; x: number; y: number }
   | { type: 'depotEmpty'; squad: Squad }
+  | { type: 'returnedHome'; squad: Squad }
   | { type: 'order'; order: Order }
   | { type: 'whistle' }
   | { type: 'dialog'; key: string }
@@ -155,6 +156,8 @@ export class World {
     const [dx, dy] = spec.dir ?? [0, -1];
     const sq = new Squad(this.squads.length, spec.side, spec.kind, spec.mode, spec.x, spec.y, dx, dy);
     sq.capacity = spec.count;
+    sq.homeX = spec.x;
+    sq.homeY = spec.y;
     sq.name = spec.id ?? `squad${sq.id}`;
     if (spec.patrol || spec.route) {
       sq.route = spec.patrol ?? spec.route ?? null;
@@ -186,6 +189,7 @@ export class World {
     this.grid.rebuild(this.aliveUnits());
     this.updateHero(dt);
     this.recallTime = Math.max(0, this.recallTime - dt);
+    this.returnWipedSquads();
     this.updateRecruit();
     this.reviveWaiting(dt);
     updateFollowSquads(this);
@@ -268,6 +272,11 @@ export class World {
    */
   isTargetable(o: Unit): boolean {
     return !o.dead && o.squad?.mode !== 'neutral' && !o.squad?.waiting;
+  }
+
+  /** 旗の部隊・待機の部隊の兵士（休んでいる仲間）か */
+  isResting(u: Unit): boolean {
+    return u.squad?.mode === 'neutral' || !!u.squad?.waiting;
   }
 
   /** 狙う相手を選ぶときの距離（体の大きさを引き、ジャンは少し遠い扱い） */
@@ -371,6 +380,24 @@ export class World {
       } else {
         this.reinforceFrom(sq);
       }
+    }
+  }
+
+  /**
+   * 率いていた部隊が全滅したら、仲間にした場所（最初に置かれた場所）へ「待機」として戻す。
+   * そこで兵士が少しずつ復活し、ジャンが触れるとまた率いられる
+   */
+  private returnWipedSquads(): void {
+    for (const sq of this.squads) {
+      if (sq.mode !== 'follow' || sq.aliveCount > 0) continue;
+      sq.mode = 'hold';
+      sq.waiting = true;
+      sq.alert = false;
+      sq.postX = sq.homeX;
+      sq.postY = sq.homeY;
+      sq.reviveTimer = 0;
+      this.touching.delete(sq);
+      this.events.push({ type: 'returnedHome', squad: sq });
     }
   }
 
@@ -623,6 +650,9 @@ export class World {
         if (Math.abs(dx) >= m || Math.abs(dy) >= m) return;
         const d = Math.hypot(dx, dy);
         if (d >= m || d < 0.01) return;
+        // 休んでいる仲間（旗・待機の部隊）は、ジャンや動いている兵士とはぶつからずにすり抜ける
+        // （通り道をふさいだり、押されて連れて行かれたりしないように）。休んでいる兵士どうしだけは押し合う
+        if (this.isResting(a) !== this.isResting(b)) return;
         const k = (m - d) / 2 / d;
         a.x -= dx * k;
         a.y -= dy * k;

@@ -68,7 +68,7 @@ export interface PracticeStats {
   recruited: number;
   whistles: number;
   /**
-   * 旗の部隊を集め終えて3秒たったあと、ジャンが同じ向きに1秒以上進み続けているときの、
+   * 旗の部隊を集め終えて3秒たったあと、ジャンが同じ向きに2秒以上進み続けているときの、
    * 弓兵のジャンより前への出っぱりの最大（仲間にした直後や引き返した直後は、後ろへ回り込む途中なので除く）
    */
   maxArcherAheadSteady: number;
@@ -89,6 +89,7 @@ export function runPracticeBot(w: World, maxSeconds = 300, dt = 1 / 60, onStep?:
   const headHistory: { x: number; y: number }[] = [];
   let movingFor = 0;
   let recruitDoneAt = -1;
+  let lastRecruitAt = -Infinity;
 
   while (w.outcome === 'playing' && w.time < maxSeconds) {
     const h = w.hero;
@@ -128,16 +129,19 @@ export function runPracticeBot(w: World, maxSeconds = 300, dt = 1 / 60, onStep?:
     onStep?.();
 
     headHistory.push({ x: w.headX, y: w.headY });
-    if (headHistory.length > 60) headHistory.shift();
+    if (headHistory.length > 120) headHistory.shift();
     movingFor = w.hero.moving ? movingFor + dt : 0;
     if (recruitDoneAt < 0 && !w.squads.some((s) => s.mode === 'neutral')) recruitDoneAt = w.time;
+    // 全滅して元の場所に戻った部隊を率い直した直後も、後ろへ回り込む途中なので測らない
+    if (w.events.some((e) => e.type === 'recruit' && !e.waiting)) lastRecruitAt = w.time;
     const old = headHistory[0];
     const steady =
       recruitDoneAt >= 0 &&
       w.time > recruitDoneAt + 3 &&
-      headHistory.length === 60 &&
+      w.time > lastRecruitAt + 3 &&
+      headHistory.length === 120 &&
       old.x * w.headX + old.y * w.headY > 0.98 &&
-      movingFor > 1;
+      movingFor > 2;
 
     for (const u of w.units) {
       if (u.dead) continue;

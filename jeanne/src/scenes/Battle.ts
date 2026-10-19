@@ -369,6 +369,10 @@ export class BattleScene extends Phaser.Scene {
           this.showBanner(n > 0 ? fmt(TEXT.guardDown, { n }) : TEXT.guardsAllDown, '#ffcc1f');
         }
         break;
+      case 'returnedHome':
+        this.showBanner(fmt(TEXT.returnedHome, { name: UNIT_DATA.kinds[e.squad.kind].name }), '#d6e4ff', 30);
+        this.refillHintCooldown = Math.max(this.refillHintCooldown, 4);
+        break;
       case 'depotEmpty':
         this.showBanner(TEXT.depotEmpty, '#d6e4ff', 30);
         break;
@@ -393,8 +397,15 @@ export class BattleScene extends Phaser.Scene {
     this.refillHintCooldown = Math.max(0, this.refillHintCooldown - dt);
     if (this.refillHintCooldown > 0) return;
     const following = w.followingSquads();
+    // 率いている部隊が1つもないときは、待機の仲間の場所へ行くよう案内する
+    if (following.length === 0) {
+      if (!w.squads.some((s) => s.waiting)) return;
+      this.showBanner(TEXT.noSquadsHint, '#d6e4ff', 30);
+      this.refillHintCooldown = 20;
+      return;
+    }
     const cap = following.reduce((n, s) => n + s.capacity, 0);
-    if (following.length === 0 || w.countFollowing() >= cap * 0.5) return;
+    if (w.countFollowing() >= cap * 0.5) return;
     if (!w.squads.some((s) => s.waiting && s.aliveCount >= 5)) return;
     this.showBanner(TEXT.refillHint, '#d6e4ff', 30);
     this.refillHintCooldown = 60;
