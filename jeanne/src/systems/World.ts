@@ -66,6 +66,7 @@ export type WorldEvent =
   | { type: 'recruit'; squad: Squad; waiting: boolean }
   | { type: 'reinforce'; from: Squad; count: number }
   | { type: 'revive'; squad: Squad; x: number; y: number }
+  | { type: 'depotEmpty'; squad: Squad }
   | { type: 'order'; order: Order }
   | { type: 'whistle' }
   | { type: 'dialog'; key: string }
@@ -334,21 +335,26 @@ export class World {
   /**
    * 旗の部隊（または待機中の仲間）にジャンが触れたら仲間にする。
    * 率いられる数を超えるときは、その場で待機させる。
-   * 待機中の部隊に触れたときは、率いている部隊の減った兵士を、待機の兵士で補う
+   * 待機中の部隊に触れているあいだは、率いている部隊の減った兵士を、待機の兵士で補う
+   * （そばで戦っているうちに減った分も、触れ直さずに補充される）
    */
   private updateRecruit(): void {
     const h = this.hero;
     if (h.dead) return;
-    const r = this.data.ai.recruitRadius;
     for (const sq of this.squads) {
       if (sq.mode !== 'neutral' && !sq.waiting) continue;
-      const c = sq.center();
-      const inside = dist(h.x, h.y, c.x, c.y) <= r;
-      // 補充は「触れた瞬間」に1回だけ。そばに立ち続けても、戻ってきた兵士は待機部隊にたまっていく
+      const inside = this.isTouching(sq);
       const touched = inside && !this.touching.has(sq);
       if (inside) this.touching.add(sq);
       else this.touching.delete(sq);
-      if (!inside || sq.aliveCount === 0) continue;
+      if (!inside) continue;
+      if (sq.aliveCount === 0) {
+        // 空の待機部隊に触れたときは、まだ戻っていないことを知らせる（触れた瞬間に1回）
+        // （補充で空にした直後の数秒は出さない）
+        const justUsed = this.time - sq.lastReinforceTime < 3;
+        if (touched && sq.waiting && !justUsed && this.missingSoldiers() > 0) this.events.push({ type: 'depotEmpty', squad: sq });
+        continue;
+      }
       if (this.followingSquads().length < this.leadership) {
         sq.mode = 'follow';
         sq.waiting = false;
@@ -362,7 +368,7 @@ export class World {
         sq.waiting = true;
         this.events.push({ type: 'recruit', squad: sq, waiting: true });
         this.reinforceFrom(sq);
-      } else if (touched) {
+      } else {
         this.reinforceFrom(sq);
       }
     }
@@ -394,6 +400,30 @@ export class World {
   }
 
   /**
+   * ジャンがこの部隊に「触れている」か。兵士がいれば、いちばん近い兵士と体どうしの隙間が touchGap 以内。
+   * ジャンは兵士に押し返されて部隊の真ん中までは入れないので、中心からの距離では判定しない（馬は体が大きく、特に届きにくい）。
+   * 兵士のいない空の待機部隊は、持ち場から recruitRadius 以内
+   */
+  isTouching(sq: Squad): boolean {
+    const h = this.hero;
+    const ai = this.data.ai;
+    let any = false;
+    for (const u of sq.units) {
+      if (u.dead) continue;
+      any = true;
+      if (dist(h.x, h.y, u.x, u.y) - u.radius - h.radius <= ai.touchGap) return true;
+    }
+    return !any && dist(h.x, h.y, sq.postX, sq.postY) <= ai.recruitRadius;
+  }
+
+  /** 率いている部隊で、最初の人数から減っている兵士の数 */
+  missingSoldiers(): number {
+    let n = 0;
+    for (const s of this.followingSquads()) n += Math.max(0, s.capacity - s.aliveCount);
+    return n;
+  }
+
+  /**
    * 待機の部隊 src の兵士を、率いている部隊のうち減っているものへ移す。
    * 兵種は問わず、減っている人数が多い部隊から順に、最初の人数まで埋める。残った兵士は待機のまま
    */
@@ -414,7 +444,10 @@ export class World {
         moved++;
       }
     }
-    if (moved > 0) this.events.push({ type: 'reinforce', from: src, count: moved });
+    if (moved > 0) {
+      src.lastReinforceTime = this.time;
+      this.events.push({ type: 'reinforce', from: src, count: moved });
+    }
   }
 
   setOrder(order: Order): void {

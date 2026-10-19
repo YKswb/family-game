@@ -88,8 +88,10 @@ export interface UnitData {
     returnSpeedMultiplier: number;
     /** 弓兵が近づかれて後ずさりするときの速さ */
     retreatSpeedMultiplier: number;
-    /** 旗の部隊の中心からこの距離までジャンが近づくと仲間になる */
+    /** 兵士のいない空の待機部隊は、持ち場からこの距離までジャンが近づくと「触れた」ことにする */
     recruitRadius: number;
+    /** 旗・待機の部隊の兵士と、ジャンの体どうしの隙間がこれ以内なら「触れた」ことにする */
+    touchGap: number;
     /** 集合の笛で戦いをやめて戻る秒数 */
     whistleSeconds: number;
     /** 弓兵はジャンの位置からこれだけ後ろの線より前に出ない */

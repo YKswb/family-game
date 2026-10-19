@@ -60,7 +60,19 @@ describe('仲間化', () => {
   const kill = (w: World, squadIndex: number, n: number) => {
     for (const u of w.squads[squadIndex].alive.slice(0, n)) u.dead = true;
   };
-  /** 補充は触れた瞬間に起きるので、いったん離れてから待機部隊に触れ直す */
+  /** 待機部隊へ向かって押し続ける（子どもが待機部隊にジャンをぶつけている状態） */
+  const pushInto = (w: World, squadIndex: number, seconds: number) => {
+    const sq = w.squads[squadIndex];
+    for (let t = 0; t < seconds; t += DT) {
+      const dx = sq.postX - w.hero.x;
+      const dy = sq.postY - w.hero.y;
+      const d = Math.hypot(dx, dy);
+      w.input = d > 4 ? { x: dx / d, y: dy / d } : { x: 0, y: 0 };
+      w.step(DT);
+    }
+    w.input = { x: 0, y: 0 };
+  };
+  /** いったん離れてから待機部隊に触れ直す */
   const retouch = (w: World, squadIndex: number) => {
     const sq = w.squads[squadIndex];
     walkTo(w, sq.postX - 250, sq.postY);
@@ -146,21 +158,59 @@ describe('仲間化', () => {
     expect(cav.aliveCount).toBe(10);
   });
 
-  it('補充は触れた瞬間に1回だけ。そばに立っていても、戻った兵士は待機部隊にたまり、触れ直すと補充される', () => {
+  it('待機部隊のそばで戦って兵士が減っても、触れたままで補充される（離れて触れ直さなくてよい）', () => {
     const w = withWaitingCavalry();
     const [sword, , , cav] = w.squads;
-    kill(w, 0, 8); // 剣 2人
-    retouch(w, 3); // 騎馬8人が剣の部隊へ。待機の騎馬は2人
+    // ジャンは騎馬の待機部隊の上に立ったまま、剣の部隊が5人倒れる
+    kill(w, 0, 5);
+    wait(w, 0.1);
+    expect(sword.aliveCount).toBe(10);
+    expect(cav.aliveCount).toBe(5);
+  });
+
+  it('待機部隊に触れているあいだは、戻ってきた兵士もすぐに補充される', () => {
+    const w = withWaitingCavalry();
+    const [sword, , , cav] = w.squads;
+    kill(w, 0, 10 - 2); // 剣 2人
+    pushInto(w, 3, 0.5);
     expect(sword.aliveCount).toBe(10);
     expect(cav.aliveCount).toBe(2);
-    kill(w, 0, 5); // 剣 5人
-    // そばに立ったまま待つと、戻った兵士は待機部隊にたまる（勝手に補充されない）
-    wait(w, UNIT_DATA.ai.waitingReviveSeconds * 2 + 0.1);
-    expect(cav.aliveCount).toBe(4);
-    expect(sword.aliveCount).toBe(5);
-    retouch(w, 3);
+    kill(w, 0, 5); // 剣 5人 → 待機の2人が加わって 7人
+    pushInto(w, 3, 0.5);
+    expect(sword.aliveCount).toBe(7);
+    expect(cav.aliveCount).toBe(0);
+    pushInto(w, 3, UNIT_DATA.ai.waitingReviveSeconds * 2);
     expect(sword.aliveCount).toBe(9);
     expect(cav.aliveCount).toBe(0);
+  });
+
+  it('空の待機部隊に触れると、まだ戻っていないことを知らせる', () => {
+    const w = withWaitingCavalry();
+    const cav = w.squads[3];
+    walkTo(w, cav.postX - 300, cav.postY);
+    kill(w, 3, 10);
+    kill(w, 0, 3);
+    cav.reviveTimer = 0;
+    const seen: string[] = [];
+    for (let t = 0; t < 4; t += DT) {
+      const dx = cav.postX - w.hero.x;
+      const d = Math.abs(dx);
+      w.input = d > 10 ? { x: Math.sign(dx), y: 0 } : { x: 0, y: 0 };
+      w.step(DT);
+      for (const e of w.events) seen.push(e.type);
+    }
+    expect(seen).toContain('depotEmpty');
+  });
+
+  it('兵士10人の待機部隊に横から歩いて近づいても触れられる（兵士に押し返されても届く）', () => {
+    const w = withWaitingCavalry();
+    const [sword, , , cav] = w.squads;
+    expect(cav.aliveCount).toBe(10);
+    walkTo(w, cav.postX - 400, cav.postY);
+    kill(w, 0, 3);
+    // 待機部隊の横（並びの長い方向）からまっすぐ歩いて行く
+    walkTo(w, cav.postX, cav.postY, 6);
+    expect(sword.aliveCount).toBe(10);
   });
 
   it('補充で空になった待機部隊も、離れているあいだに戻ってくる（実際のプレイと同じく、補充で兵士が移って空になる）', () => {

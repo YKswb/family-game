@@ -369,6 +369,9 @@ export class BattleScene extends Phaser.Scene {
           this.showBanner(n > 0 ? fmt(TEXT.guardDown, { n }) : TEXT.guardsAllDown, '#ffcc1f');
         }
         break;
+      case 'depotEmpty':
+        this.showBanner(TEXT.depotEmpty, '#d6e4ff', 30);
+        break;
       case 'revive':
         this.burst(e.x, e.y - 14, 0x9fc3ff, 10, 120, 4);
         break;

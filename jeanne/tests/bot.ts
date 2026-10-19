@@ -201,12 +201,8 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
     const following = w.followingSquads();
     const have = following.reduce((n, s) => n + s.aliveCount, 0);
     const cap = following.reduce((n, s) => n + s.capacity, 0) + (w.leadership - following.length) * 10;
-    // 補充は触れた瞬間に起きるので、いま触れている待機部隊は目指さない（触れたら次へ向かい、あとで触れ直す）
-    const touchR = w.data.ai.recruitRadius - 15;
-    const refill =
-      have < cap * 0.5
-        ? nearestSquad(w, (s) => s.waiting && s.aliveCount >= 5 && Math.hypot(s.center().x - h.x, s.center().y - h.y) > touchR)
-        : null;
+    // いま触れている待機部隊は目指さない（触れれば補充されるので、次へ向かう）
+    const refill = have < cap * 0.5 ? nearestSquad(w, (s) => s.waiting && s.aliveCount >= 5 && !w.isTouching(s)) : null;
     if (refill && Math.hypot(refill.center().x - h.x, refill.center().y - h.y) < 80) refillsDone++;
     if (retreating) {
       // 8方向のうち、敵からいちばん遠くなる場所へ下がって回復を待つ

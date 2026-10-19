@@ -23,6 +23,7 @@
   "recruitedWaiting": "{name}は ここで まっている",
   "reinforced": "なかまが {n}人 くわわった！",
   "refillHint": "たいきの なかまに さわると ほじゅう できるよ",
+  "depotEmpty": "この たいきの なかまは まだ もどっていない\nすこし まってから また さわろう",
   "orderCharge": "とつげき",
   "orderGather": "しゅうごう",
   "orderLabel": "めいれい：{order}",

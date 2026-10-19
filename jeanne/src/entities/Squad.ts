@@ -29,6 +29,8 @@ export class Squad {
   capacity = 0;
   /** 待機中に、次の兵士が戻ってくるまでの経過時間 */
   reviveTimer = 0;
+  /** 最後にこの待機部隊から補充した時刻 */
+  lastReinforceTime = -Infinity;
   /** ステージデータでの名前（イベントや大将の護衛から参照する） */
   name = '';
   /** 巡回・進軍のルート。持ち場がこの上を動く */
