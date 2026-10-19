@@ -1,0 +1,9 @@
+{
+  "spotRange": 40,
+  "payFirstDelay": 0.2,
+  "payInterval": 0.065,
+  "kinds": {
+    "axe": { "costs": [12, 20, 30] },
+    "bag": { "costs": [8, 15, 24], "capacityPerLevel": 12 }
+  }
+}

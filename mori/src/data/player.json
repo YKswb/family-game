@@ -1,0 +1,9 @@
+{
+  "speed": 230,
+  "radius": 12,
+  "baseCapacity": 20,
+  "chopRange": 62,
+  "chopIntervals": [0.42, 0.32, 0.24, 0.17],
+  "houseClearance": 12,
+  "territoryMargin": 16
+}

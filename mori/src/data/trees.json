@@ -1,0 +1,9 @@
+{
+  "hp": 3,
+  "radius": 24,
+  "woodPerChop": 1,
+  "woodOnFell": 1,
+  "regrowSeconds": 16,
+  "regrowClearance": 45,
+  "choppableMargin": 20
+}

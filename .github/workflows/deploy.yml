@@ -24,7 +24,9 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: jeanne/package-lock.json
+          cache-dependency-path: |
+            jeanne/package-lock.json
+            mori/package-lock.json
 
       - name: Install (jeanne)
         working-directory: jeanne
@@ -38,12 +40,26 @@ jobs:
         working-directory: jeanne
         run: npm run build
 
-      # サイトの形: /index.html, /mori/, /jeanne/（jeanne/dist の中身）
+      - name: Install (mori)
+        working-directory: mori
+        run: npm ci
+
+      - name: Test (mori)
+        working-directory: mori
+        run: npm test
+
+      # 作り直し版は、今の版と入れ替えるまで /mori/next/ で試せるようにする
+      - name: Build (mori)
+        working-directory: mori
+        run: npm run build -- --base /family-game/mori/next/
+
+      # サイトの形: /index.html, /mori/（今の版）, /mori/next/（作り直し版）, /jeanne/（jeanne/dist の中身）
       - name: Assemble site
         run: |
-          mkdir -p _site/jeanne
+          mkdir -p _site/jeanne _site/mori/next
           cp index.html _site/
-          cp -R mori _site/mori
+          cp mori/legacy/index.html mori/public/apple-touch-icon.png _site/mori/
+          cp -R mori/dist/. _site/mori/next/
           cp -R jeanne/dist/. _site/jeanne/
 
       - uses: actions/configure-pages@v6

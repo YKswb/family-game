@@ -1,0 +1,29 @@
+{
+  "name": "はじまりの森",
+  "theme": {
+    "background": "#3d7431",
+    "ground": "#78c35f",
+    "tuft": ["#69b552", "#88cd6d"],
+    "flower": ["#ffffff", "#ffd84d", "#ff9ec4"],
+    "leaf": ["#2a8338", "#3fa04a"],
+    "clearing": "#f0d696",
+    "fog": "#12280e"
+  },
+  "width": 1400,
+  "height": 1400,
+  "house": { "x": 700, "y": 700, "r": 58 },
+  "player": { "x": 700, "y": 795 },
+  "territory": [320, 440, 580],
+  "trees": {
+    "count": 260,
+    "minFromHouse": 250,
+    "spacing": 52,
+    "margin": 40,
+    "keepClear": [[300, 0], [-300, 0], [0, 320], [0, -320], [0, 280], [0, 400]],
+    "keepClearRadius": 60
+  },
+  "spots": [
+    { "type": "axe", "dx": 150, "dy": 0 },
+    { "type": "bag", "dx": -150, "dy": 0 }
+  ]
+}
