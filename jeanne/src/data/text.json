@@ -1,0 +1,17 @@
+{
+  "heroName": "ジャン",
+  "allyLabel": "みかた",
+  "enemyLabel": "てき",
+  "hitStrong": "こうか ばつぐん！",
+  "hitWeak": "あまり きかない…",
+  "charge": "とつげき！",
+  "strongHint": "{a}は {b}に つよい",
+  "archerHint": "{a}は ちかづかれると よわい",
+  "evenHint": "おなじ くらいの つよさ",
+  "win": "かった！",
+  "lose": "ジャンが たおれた…",
+  "survivors": "のこった みかた {n}人",
+  "retry": "もういちど",
+  "practiceTitle": "れんしゅう",
+  "time": "じかん"
+}
