@@ -8,7 +8,7 @@ import { Random } from '../systems/Random';
 import { World, type WorldEvent } from '../systems/World';
 import { Button } from '../ui/Button';
 import { DPR, TEXT, VIEW_H, VIEW_W, WORLD_ZOOM, fmt, textStyle } from '../ui/Display';
-import { Hud } from '../ui/Hud';
+import { Hud, compositionText } from '../ui/Hud';
 import { Joystick } from '../ui/Joystick';
 import { Minimap } from '../ui/Minimap';
 
@@ -241,11 +241,11 @@ export class BattleScene extends Phaser.Scene {
         label.setColor('#ffffff');
         label.setPosition(c.x, c.y - 96);
       } else if (sq.waiting) {
-        label.setText(`${stats.short} ${n} ${TEXT.waiting}`);
+        label.setText(`${compositionText(sq)} ${TEXT.waiting}`);
         label.setColor('#d6e4ff');
         label.setPosition(c.x, c.y - 40);
       } else {
-        label.setText(`${stats.short} ${n}`);
+        label.setText(compositionText(sq));
         label.setColor(sq.side === 'ally' ? '#bcd6ff' : '#ffc4bd');
         label.setPosition(c.x, c.y - 40);
       }
@@ -300,6 +300,12 @@ export class BattleScene extends Phaser.Scene {
       case 'whistle':
         this.showBanner(TEXT.whistleCall, '#ffe066');
         break;
+      case 'reinforce': {
+        this.showBanner(fmt(TEXT.reinforced, { n: e.count }), '#ffd84d');
+        const c = this.world.hero;
+        this.burst(c.x, c.y - 20, 0x4f8dff, 16, 180, 5);
+        break;
+      }
     }
   }
 

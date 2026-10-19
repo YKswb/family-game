@@ -41,6 +41,56 @@ describe('仲間化', () => {
     const cav = w.squads[3];
     expect(cav.waiting).toBe(true);
     expect(cav.mode).toBe('hold');
+    // 率いている部隊が満員なので、待機の兵士は移らない
+    expect(cav.aliveCount).toBe(10);
+  });
+
+  /** 剣・槍・弓を率い、騎馬を待機させ、ジャンが騎馬隊の上に立っている状態 */
+  function withWaitingCavalry(): World {
+    const w = new World({
+      width: 3000,
+      height: 1000,
+      hero: { x: 100, y: 500 },
+      heroDir: [1, 0],
+      squads: [flag('sword', 500, 500), flag('spear', 900, 500), flag('archer', 1300, 500), flag('cavalry', 1700, 500)],
+    });
+    for (const sq of w.squads) walkTo(w, sq.postX, sq.postY);
+    return w;
+  }
+  const kill = (w: World, squadIndex: number, n: number) => {
+    for (const u of w.squads[squadIndex].alive.slice(0, n)) u.dead = true;
+  };
+
+  it('兵士が減ったあとに待機の部隊に触れると、兵種を問わず減った部隊へ最初の人数まで加わる', () => {
+    const w = withWaitingCavalry();
+    const [sword, spear, archer, cav] = w.squads;
+    kill(w, 0, 8); // 剣 2人
+    kill(w, 1, 4); // 槍 6人
+    wait(w, 0.1);
+    // 減っている人数が多い剣の部隊から埋める
+    expect(sword.composition()).toEqual([
+      { kind: 'sword', n: 2 },
+      { kind: 'cavalry', n: 8 },
+    ]);
+    expect(spear.composition()).toEqual([
+      { kind: 'spear', n: 6 },
+      { kind: 'cavalry', n: 2 },
+    ]);
+    expect(archer.aliveCount).toBe(10);
+    expect(cav.aliveCount).toBe(0);
+    expect(w.followingSquads()).toHaveLength(3);
+    // 移った兵士はその部隊の一員として付いてくる
+    expect(sword.alive.every((u) => u.squad === sword)).toBe(true);
+  });
+
+  it('待機の兵士が余ったら、残りはその場で待機を続ける', () => {
+    const w = withWaitingCavalry();
+    const [sword, , , cav] = w.squads;
+    kill(w, 0, 7);
+    wait(w, 0.1);
+    expect(sword.aliveCount).toBe(10);
+    expect(cav.aliveCount).toBe(3);
+    expect(cav.waiting).toBe(true);
   });
 
   it('率いている部隊が全滅したあと、待機している部隊に触れると仲間に加わる', () => {

@@ -1,7 +1,16 @@
 import type Phaser from 'phaser';
 import { UNIT_DATA } from '../data/unitData';
+import type { Squad } from '../entities/Squad';
 import type { World } from '../systems/World';
 import { TEXT, fmt, textStyle } from './Display';
+
+/** 部隊の兵種ごとの人数（例：「剣2 馬8」）。補充で兵種が混ざった部隊もそのまま表す */
+export function compositionText(sq: Squad, sep = ' '): string {
+  return sq
+    .composition()
+    .map((c) => `${UNIT_DATA.kinds[c.kind].short}${c.n}`)
+    .join(sep);
+}
 
 /** 画面左上：ジャンのHP、いまの命令、率いている部隊の一覧、敵の残りと経過時間 */
 export class Hud {
@@ -43,7 +52,7 @@ export class Hud {
     this.order.setColor(charge ? '#ffb0a8' : '#bcd6ff');
 
     const following = w.followingSquads();
-    const list = following.map((sq) => `${UNIT_DATA.kinds[sq.kind].short}${sq.aliveCount}`).join(' ');
+    const list = following.map((sq) => compositionText(sq, '')).join(' ');
     this.squads.setText(`${fmt(TEXT.squadCount, { n: following.length, max: w.leadership })}　${list || TEXT.noSquads}`);
 
     const s = Math.floor(w.time);

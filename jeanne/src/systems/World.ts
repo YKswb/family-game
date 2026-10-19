@@ -43,6 +43,7 @@ export type WorldEvent =
   | { type: 'shoot'; x: number; y: number }
   | { type: 'squadWiped'; squad: Squad }
   | { type: 'recruit'; squad: Squad; waiting: boolean }
+  | { type: 'reinforce'; from: Squad; count: number }
   | { type: 'order'; order: Order }
   | { type: 'whistle' };
 
@@ -115,6 +116,7 @@ export class World {
   addSquad(spec: SquadSpec): Squad {
     const [dx, dy] = spec.dir ?? [0, -1];
     const sq = new Squad(this.squads.length, spec.side, spec.kind, spec.mode, spec.x, spec.y, dx, dy);
+    sq.capacity = spec.count;
     const stats = this.data.kinds[spec.kind];
     for (let i = 0; i < spec.count; i++) {
       const u = new Unit(this.nextId++, spec.kind, spec.side, stats, spec.x, spec.y, sq, this.rng.next());
@@ -233,7 +235,8 @@ export class World {
 
   /**
    * 旗の部隊（または待機中の仲間）にジャンが触れたら仲間にする。
-   * 率いられる数を超えるときは、その場で待機させる
+   * 率いられる数を超えるときは、その場で待機させる。
+   * 待機中の部隊に触れたときは、率いている部隊の減った兵士を、待機の兵士で補う
    */
   private updateRecruit(): void {
     const h = this.hero;
@@ -255,8 +258,34 @@ export class World {
         sq.mode = 'hold';
         sq.waiting = true;
         this.events.push({ type: 'recruit', squad: sq, waiting: true });
+      } else {
+        this.reinforceFrom(sq);
       }
     }
+  }
+
+  /**
+   * 待機の部隊 src の兵士を、率いている部隊のうち減っているものへ移す。
+   * 兵種は問わず、減っている人数が多い部隊から順に、最初の人数まで埋める。残った兵士は待機のまま
+   */
+  private reinforceFrom(src: Squad): void {
+    const targets = this.followingSquads()
+      .filter((s) => s.aliveCount < s.capacity)
+      .sort((a, b) => b.capacity - b.aliveCount - (a.capacity - a.aliveCount));
+    if (targets.length === 0) return;
+    const pool = src.alive;
+    let moved = 0;
+    for (const t of targets) {
+      for (let need = t.capacity - t.aliveCount; need > 0 && pool.length > 0; need--) {
+        const u = pool.shift()!;
+        src.units.splice(src.units.indexOf(u), 1);
+        t.units.push(u);
+        u.squad = t;
+        this.setTarget(u, null);
+        moved++;
+      }
+    }
+    if (moved > 0) this.events.push({ type: 'reinforce', from: src, count: moved });
   }
 
   setOrder(order: Order): void {
