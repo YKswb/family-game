@@ -229,7 +229,7 @@ describe('隊列の向き', () => {
   });
 });
 
-describe('部隊の練習場の自動プレイ', () => {
+describe('部隊の練習場の自動プレイ', { timeout: 30000 }, () => {
   it.each([1, 2, 3])('旗の部隊を集めて敵を全滅させられ、まっすぐ進むあいだ弓兵はジャンより前に出ない（seed %i）', (seed) => {
     const w = new World(practiceConfig(seed));
     const s = runPracticeBot(w);

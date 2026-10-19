@@ -152,7 +152,8 @@ describe('ステージ1の仕組み', () => {
   });
 });
 
-describe('ステージ1の自動プレイ', () => {
+// 自動プレイは GitHub Actions のマシンでは手元より数倍遅いので、制限時間を長めにする
+describe('ステージ1の自動プレイ', { timeout: 30000 }, () => {
   it.each([1, 2, 3, 4])('最後まで通せる：会話が順に起き、大将を倒してクリア（seed %i）', (seed) => {
     const w = new World(stageConfig(STAGES.stage1.stage, seed));
     const s = runStageBot(w);

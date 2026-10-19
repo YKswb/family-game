@@ -9,7 +9,7 @@ const MAX_SPREAD = 400;
 
 const PAIRS = SOLDIER_KINDS.flatMap((a) => SOLDIER_KINDS.map((e) => [a, e] as const));
 
-describe('練習場の自動プレイ（ボットがジャンを動かす）', () => {
+describe('練習場の自動プレイ（ボットがジャンを動かす）', { timeout: 30000 }, () => {
   it.each(PAIRS)('味方 %s ／ 敵 %s を最後まで通せる', (ally, enemy) => {
     const w = new World(arenaConfig(ally, enemy, 7));
     const s = runBot(w, 120);
@@ -20,7 +20,7 @@ describe('練習場の自動プレイ（ボットがジャンを動かす）', (
   });
 });
 
-describe('隊列の追従', () => {
+describe('隊列の追従', { timeout: 30000 }, () => {
   it.each(SOLDIER_KINDS)('ジャンが全力で走り回っても %s は離れすぎない', (kind) => {
     // 敵のいない場所で、ジャンを大きな四角形に沿って走らせる
     const w = new World({
