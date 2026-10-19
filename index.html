@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ゲーム">
+<meta name="theme-color" content="#fff4d6">
+<title>かぞくの ゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-top: #fff4d6;
+    --bg-bottom: #ffd9e8;
+    --ink: #4a3a2a;
+    --mori: #4caf50;
+    --mori-dark: #2e7d32;
+    --jeanne: #3f6fd8;
+    --jeanne-dark: #2a4fa3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    min-height: 100%;
+    font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif;
+    font-weight: 800;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    background-attachment: fixed;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+             max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(36px, 7vw, 64px);
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+  h1 .star { display: inline-block; animation: spin 6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .games {
+    width: 100%;
+    max-width: 960px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 28px;
+  }
+  .game {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 280px;
+    padding: 28px 20px;
+    border-radius: 36px;
+    color: #fff;
+    text-decoration: none;
+    text-align: center;
+    box-shadow: 0 10px 0 var(--shadow), 0 16px 28px rgba(0, 0, 0, 0.18);
+    transition: transform 0.08s, box-shadow 0.08s;
+    touch-action: manipulation;
+  }
+  .game:active {
+    transform: translateY(8px);
+    box-shadow: 0 2px 0 var(--shadow), 0 6px 12px rgba(0, 0, 0, 0.18);
+  }
+  .game .icon { font-size: 96px; line-height: 1; }
+  .game .name { font-size: clamp(28px, 4.2vw, 40px); white-space: nowrap; letter-spacing: 0.04em; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.18); }
+  .game .note { font-size: 20px; opacity: 0.92; }
+  .mori { background: var(--mori); --shadow: var(--mori-dark); }
+  .jeanne { background: var(--jeanne); --shadow: var(--jeanne-dark); }
+</style>
+</head>
+<body>
+  <h1><span class="star">⭐</span> どれで あそぶ？ <span class="star">⭐</span></h1>
+  <main class="games">
+    <a class="game mori" href="mori/">
+      <span class="icon">🌳</span>
+      <span class="name">もりの まもりびと</span>
+      <span class="note">もりを まもろう！</span>
+    </a>
+    <a class="game jeanne" href="jeanne/">
+      <span class="icon">⚔️</span>
+      <span class="name">ジャンヌの<ruby>騎士<rt>きし</rt></ruby></span>
+      <span class="note">じゅんび中</span>
+    </a>
+  </main>
+</body>
+</html>
