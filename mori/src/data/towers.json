@@ -15,7 +15,11 @@
       "range": [190, 215, 245],
       "interval": [1.0, 0.72, 0.5],
       "damage": [1, 1.3, 2],
-      "air": true
+      "air": true,
+      "branches": [
+        { "id": "rapid", "icon": "💨", "name": "れんしゃ", "desc": "うつ はやさが 1.6ばい", "intervalMul": 0.62 },
+        { "id": "long", "icon": "🎯", "name": "とおくまで", "desc": "とどく きょりが のびて、こうげきも 少し アップ", "rangeAdd": 70, "damageMul": 1.25 }
+      ]
     },
     "cannon": {
       "icon": "💣",
@@ -27,7 +31,11 @@
       "interval": [1.9, 1.6, 1.3],
       "damage": [3, 4.5, 6.5],
       "air": false,
-      "splash": [50, 58, 66]
+      "splash": [50, 58, 66],
+      "branches": [
+        { "id": "big", "icon": "💥", "name": "大ばくはつ", "desc": "ばくはつが 大きく、強くなる", "splashAdd": 30, "damageMul": 1.3 },
+        { "id": "burn", "icon": "🔥", "name": "もえる 地面", "desc": "ばくはつの あとに 火が のこって、上を 通る 敵に ダメージ", "burn": { "dps": 2.5, "time": 3, "radius": 46 } }
+      ]
     },
     "ice": {
       "icon": "❄️",
@@ -39,7 +47,47 @@
       "interval": [1.2, 1.0, 0.8],
       "damage": [0.5, 0.7, 1],
       "air": true,
-      "slow": [1.8, 2.4, 3]
+      "slow": [1.8, 2.4, 3],
+      "branches": [
+        { "id": "wide", "icon": "🌨️", "name": "ひろい さむさ", "desc": "当たった まわりの 敵も まとめて おそくする", "slowArea": 70 },
+        { "id": "freeze", "icon": "🧊", "name": "こおらせる", "desc": "ときどき 敵を 1秒 こおらせて 止める", "freeze": { "chance": 0.35, "time": 1.0 } }
+      ]
+    },
+    "lightning": {
+      "icon": "⚡",
+      "name": "かみなりのとう",
+      "short": "かみなり",
+      "desc": "近くの 敵に つぎつぎ 電気が とぶ。空にも 当たる",
+      "color": "#f2c230",
+      "range": [170, 190, 210],
+      "interval": [1.5, 1.3, 1.1],
+      "damage": [1.2, 1.6, 2.2],
+      "air": true,
+      "chain": [3, 4, 5],
+      "chainRange": 110,
+      "chainFalloff": 0.75,
+      "branches": [
+        { "id": "storm", "icon": "🌩️", "name": "あらし", "desc": "電気が とぶ 数が +3", "chainAdd": 3 },
+        { "id": "sky", "icon": "🦇", "name": "空の てき", "desc": "空の 敵への こうげきが 2ばい", "airMul": 2 }
+      ]
+    },
+    "heal": {
+      "icon": "💚",
+      "name": "ちゆのとう",
+      "short": "ちゆ",
+      "desc": "近くの かべと おうちを 少しずつ 直す。こうげきは しない",
+      "color": "#4cbf6a",
+      "range": [160, 180, 200],
+      "interval": [3.0, 2.6, 2.2],
+      "damage": [0, 0, 0],
+      "air": false,
+      "support": true,
+      "heal": [2, 3, 4],
+      "houseHeal": 1,
+      "branches": [
+        { "id": "fast", "icon": "💖", "name": "はやく 直す", "desc": "直す はやさと 量が アップ", "intervalMul": 0.7, "healMul": 1.5 },
+        { "id": "guard", "icon": "🛡️", "name": "かたい かべ", "desc": "近くの かべが 受ける ダメージが へる", "wallGuard": 0.6 }
+      ]
     }
   }
 }

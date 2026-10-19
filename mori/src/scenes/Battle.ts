@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { STAGES, type TowerKind } from '../data/gameData';
+import { PRACTICE_STAGE, STAGES, type StageData } from '../data/gameData';
 import type { Spot } from '../systems/Build';
 import { Random } from '../systems/Random';
 import { World, type WorldEvent } from '../systems/World';
@@ -46,7 +46,6 @@ interface SpotLabel {
 }
 
 const POPUP_LIFE = 1.1;
-const TOWER_KINDS: TowerKind[] = ['arrow', 'cannon', 'ice'];
 /** えんとつの煙を出す間隔（秒） */
 const CHIMNEY_INTERVAL = 0.7;
 
@@ -56,12 +55,21 @@ function difficultyFromUrl(): number {
   return v === '0' ? 0 : v === '2' ? 2 : 1;
 }
 
+/** ステージも、ステージ選びができるまでは URL の ?stage=practice で練習の森を選べる */
+function stageFromUrl(): { stage: StageData; practice: boolean } {
+  const practice = new URLSearchParams(window.location.search).get('stage') === 'practice';
+  return { stage: practice ? PRACTICE_STAGE : STAGES[0], practice };
+}
+
 /** 戦場：木を集めて建て、敵のウェーブからおうちを守る */
 export class BattleScene extends Phaser.Scene {
   private world!: World;
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private spotGfx!: Phaser.GameObjects.Graphics;
+  /** 地面の上（敵より下）に描くもの：大ほうの火 */
+  private groundFxGfx!: Phaser.GameObjects.Graphics;
   private fxGfx!: Phaser.GameObjects.Graphics;
+  private practice = false;
   private tex!: Textures;
   private scenery!: Scenery;
   /** 落ちた木材と、飛んでいく木材の画像 */
@@ -107,7 +115,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    const stage = STAGES[0];
+    const { stage, practice } = stageFromUrl();
+    this.practice = practice;
     const th = stage.theme;
     this.world = new World(stage, { seed: Date.now() % 100000, difficulty: difficultyFromUrl() });
     this.leaf = [hex(th.leaf[0]), hex(th.leaf[1])];
@@ -121,6 +130,7 @@ export class BattleScene extends Phaser.Scene {
     const tex = (this.tex = new Textures(this, th, this.world.data.towers, this.world.data.enemies));
     this.drawGround();
     this.spotGfx = this.toWorld(this.add.graphics().setDepth(1));
+    this.groundFxGfx = this.toWorld(this.add.graphics().setDepth(2.55));
     this.createSpotLabels();
     const logKey = tex.logKey();
     this.dropPool = new ImagePool(() => this.toWorld(this.add.image(0, 0, logKey).setScale(1 / TEX_SCALE).setDepth(2.5)));
@@ -194,7 +204,8 @@ export class BattleScene extends Phaser.Scene {
     this.updateEffects(fxDt);
     this.render(fxDt);
     this.weather.update(dt);
-    this.hud.update(w, fxDt, (x, y) => this.toScreen(x, y), fmt(TEXT.stageLabel, { n: 1, diff: w.diff.name }));
+    const label = this.practice ? fmt(TEXT.practiceLabel, { diff: w.diff.name }) : fmt(TEXT.stageLabel, { n: 1, diff: w.diff.name });
+    this.hud.update(w, fxDt, (x, y) => this.toScreen(x, y), label);
     this.joystick.draw();
     this.updateCamera(dt);
   }
@@ -250,24 +261,42 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** とうの種類か、レベルアップの強化を選ぶ画面を出す */
+  /** とうの種類、とうの分かれ道、レベルアップの強化を選ぶ画面を出す */
   private openChoice(): void {
     const w = this.world;
     const c = w.choice;
     if (!c || this.overlay.visible) return;
     this.joystick.release();
+    const kinds = w.data.towers.kinds;
     if (c.type === 'tower') {
-      const kinds = w.data.towers.kinds;
+      // このステージで建てられる種類だけを出す
+      const list = w.stage.towers;
       this.overlay.showChoice(
         TEXT.chooseTower,
         '',
-        TOWER_KINDS.map((k) => ({ icon: kinds[k].icon, name: kinds[k].name, desc: kinds[k].desc })),
+        list.map((k) => ({ icon: kinds[k].icon, name: kinds[k].name, desc: kinds[k].desc })),
         (i) => {
-          const kind = TOWER_KINDS[i];
+          const kind = list[i];
           w.chooseTower(kind);
           const s = c.spot;
           this.popup(s.x, s.y - 120, fmt(TEXT.builtTower, { name: kinds[kind].name }));
           this.fx.sparkle(s.x, s.y + MUZZLE_Y - 20, 10, tint(hex(kinds[kind].color), 0.5));
+        },
+      );
+      return;
+    }
+    if (c.type === 'branch') {
+      const s = c.spot;
+      const t = kinds[s.kind!];
+      this.overlay.showChoice(
+        TEXT.chooseBranch,
+        fmt(TEXT.branchLead, { name: t.name }),
+        t.branches.map((b) => ({ icon: b.icon, name: b.name, desc: b.desc })),
+        (i) => {
+          w.chooseBranch(i);
+          this.popup(s.x, s.y - 140, fmt(TEXT.builtBranch, { name: t.branches[i].name }));
+          this.fx.sparkle(s.x, s.y + MUZZLE_Y - 30, 14, tint(hex(t.color), 0.5));
+          this.fx.ring(s.x, s.y, 20, 80, hex(t.color), 0.6, 6);
         },
       );
       return;
@@ -426,6 +455,7 @@ export class BattleScene extends Phaser.Scene {
         .setRotation(k * 6);
     }
     this.flyerPool.end();
+    this.renderFires();
 
     const f = this.fxGfx;
     f.clear();
@@ -440,6 +470,31 @@ export class BattleScene extends Phaser.Scene {
 
     const full = p.wood >= w.capacity;
     this.fullText.setVisible(full).setPosition(p.x, p.y - stackTop(p) - 22);
+  }
+
+  /** 大ほうの「もえる 地面」の火。ちらちら揺らし、消える前に小さくなる */
+  private renderFires(): void {
+    const g = this.groundFxGfx;
+    g.clear();
+    const t = this.world.time;
+    for (const fire of this.world.fires) {
+      const k = Math.min(1, fire.t / 0.6);
+      const r = fire.r * (0.6 + 0.4 * k);
+      g.fillStyle(0xff7a2a, 0.22 * k);
+      g.fillEllipse(fire.x, fire.y, r * 2.2, r * 1.3);
+      g.fillStyle(0xffb347, 0.35 * k);
+      g.fillEllipse(fire.x, fire.y, r * 1.5, r * 0.9);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + fire.x;
+        const fx = fire.x + Math.cos(a) * r * 0.55;
+        const fy = fire.y + Math.sin(a) * r * 0.3;
+        const h = (10 + 6 * Math.sin(t * 12 + i * 1.7)) * k;
+        g.fillStyle(0xff5a2a, 0.85 * k);
+        g.fillTriangle(fx - 5, fy, fx + 5, fy, fx, fy - h);
+        g.fillStyle(0xffd84d, 0.9 * k);
+        g.fillTriangle(fx - 2.5, fy, fx + 2.5, fy, fx, fy - h * 0.6);
+      }
+    }
   }
 
   /** 領地の外の霧。縁は少しずつ濃くして、くっきりした線にしない */
@@ -606,6 +661,33 @@ export class BattleScene extends Phaser.Scene {
         fx.burst(e.x, e.y - 10, 0xffb347, 14, 220, 6);
         fx.smoke(e.x, e.y - 10, 7, 12, 0x9a9a9a, 70);
         this.shake = Math.max(this.shake, 0.12);
+        break;
+      case 'zap':
+        fx.zap(e.points);
+        for (const pt of e.points.slice(1)) fx.sparkle(pt.x, pt.y, 3, 0xfff3a0);
+        break;
+      case 'mend':
+        fx.plus(e.x, e.y - 20, 3);
+        break;
+      case 'chill':
+        fx.ring(e.x, e.y - 10, 10, e.radius, 0xbff0ff, 0.4, 5);
+        break;
+      case 'freeze':
+        fx.sparkle(e.enemy.x, e.enemy.y - e.enemy.r, 8, 0xdff6ff);
+        break;
+      case 'blocked':
+        fx.sparkle(e.enemy.x + e.enemy.face * e.enemy.r, e.enemy.y - e.enemy.r, 3, 0xffffff);
+        if (this.fxRng.next() < 0.35) this.popup(e.enemy.x, e.enemy.y - e.enemy.r * 2.4, TEXT.blocked, '#e8eef4');
+        break;
+      case 'stolen':
+        this.popup(e.tree.x, e.tree.y - 80, TEXT.stolen, '#ffb0a0');
+        break;
+      case 'escape':
+        this.popup(w.house.x, w.house.y - 170, TEXT.escaped, '#ffb0a0');
+        break;
+      case 'healPulse':
+        fx.ring(e.enemy.x, e.enemy.y - e.enemy.r, 12, e.radius, 0x7dffa0, 0.6, 5);
+        fx.plus(e.enemy.x, e.enemy.y - e.enemy.r * 2, 4, 0x7dffa0);
         break;
       case 'wallHit': {
         const pp = e.spot.posts[Math.floor(this.fxRng.next() * e.spot.posts.length)];

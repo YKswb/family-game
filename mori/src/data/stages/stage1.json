@@ -1,6 +1,7 @@
 {
   "name": "はじまりの森",
   "tip": "",
+  "towers": ["arrow", "cannon", "ice"],
   "theme": {
     "background": "#3d7431",
     "ground": "#78c35f",

@@ -3,7 +3,7 @@ import type { BuildingType, EnemyData, EnemyKind, StageTheme, TowerData, TowerKi
 import type { Spot } from '../systems/Build';
 import { House } from '../entities/House';
 import { hex } from '../ui/Display';
-import { drawEnemyBody, enemyFrame } from './EnemyView';
+import { drawEnemyBody, drawMound, enemyFrame } from './EnemyView';
 import { drawHouse } from './HouseView';
 import { drawIcon } from './IconView';
 import { SPOT_R } from './SpotView';
@@ -32,7 +32,7 @@ interface Frame {
 const TREE: Frame = { w: 96, h: 100, ox: 48, oy: 92 };
 const STUMP: Frame = { w: 34, h: 24, ox: 17, oy: 16 };
 const POST: Frame = { w: 30, h: 54, ox: 15, oy: 46 };
-const TOWER: Frame = { w: 70, h: 146, ox: 35, oy: 132 };
+const TOWER: Frame = { w: 70, h: 162, ox: 35, oy: 148 };
 const HOUSE: Frame = { w: 150, h: 170, ox: 75, oy: 146 };
 const SPOT: Frame = { w: (SPOT_R + 4) * 2, h: (SPOT_R + 4) * 2, ox: SPOT_R + 4, oy: SPOT_R + 4 };
 const ICON: Frame = { w: 40, h: 44, ox: 20, oy: 24 };
@@ -131,11 +131,11 @@ export class Textures {
     return place(this.scene, key, MARKER, x, y);
   }
 
-  /** とう（種類・レベル・雪で見た目が変わる） */
-  towerKey(kind: TowerKind | null, level: number): string {
+  /** とう（種類・レベル・分かれ道・雪で見た目が変わる） */
+  towerKey(kind: TowerKind | null, level: number, branch: number | null = null): string {
     const snow = !!this.theme.snow;
-    return bake(this.scene, `tower:${kind ?? 'none'}:${level}:${snow ? 1 : 0}`, TOWER, (g) => {
-      const fake = { x: 0, y: 0, kind, level, pop: 0 } as Spot;
+    return bake(this.scene, `tower:${kind ?? 'none'}:${level}:${branch ?? '-'}:${snow ? 1 : 0}`, TOWER, (g) => {
+      const fake = { x: 0, y: 0, kind, level, branch, pop: 0 } as Spot;
       drawTower(g, fake, this.towers, snow);
     });
   }
@@ -169,10 +169,16 @@ export class Textures {
     return place(this.scene, key, ICON, x, y + 2);
   }
 
-  /** 敵の体（右向き）。空の敵は羽ばたきの番号ごと */
-  enemyKey(kind: EnemyKind, frame = 0): string {
+  /** 敵の体（右向き）。空の敵は羽ばたきの番号ごと、木こりは持っている木の数ごと */
+  enemyKey(kind: EnemyKind, frame = 0, carried = 0): string {
     const stats = this.enemies.kinds[kind];
-    return bake(this.scene, `enemy:${kind}:${frame}`, enemyFrame(stats), (g) => drawEnemyBody(g, kind, stats, frame));
+    return bake(this.scene, `enemy:${kind}:${frame}:${carried}`, enemyFrame(stats), (g) => drawEnemyBody(g, kind, stats, frame, carried));
+  }
+
+  /** もぐっているもぐらの土の山（もぐらと同じ大きさの画像にする） */
+  moundKey(kind: EnemyKind): string {
+    const stats = this.enemies.kinds[kind];
+    return bake(this.scene, `mound:${kind}`, enemyFrame(stats), (g) => drawMound(g, stats.r));
   }
 
   enemy(kind: EnemyKind): Baked {

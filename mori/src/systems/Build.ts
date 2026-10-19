@@ -26,6 +26,8 @@ export class Spot {
   // ---- とう ----
   /** 建てたときに選んだ種類（選ぶまでは null で、それまで次のレベルへは払えない） */
   kind: TowerKind | null = null;
+  /** レベル3で選んだ分かれ道（branches の添字。選ぶまでは null） */
+  branch: number | null = null;
   /** 次に撃てるまでの秒数 */
   cd = 0;
 

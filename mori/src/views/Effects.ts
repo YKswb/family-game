@@ -1,8 +1,8 @@
 import type Phaser from 'phaser';
 import { Random } from '../systems/Random';
 
-/** square: 木くずや火花、smoke: ふくらみながら消える煙、spark: きらっと光る点 */
-type ParticleKind = 'square' | 'smoke' | 'spark';
+/** square: 木くずや火花、smoke: ふくらみながら消える煙、spark: きらっと光る点、plus: 回復の十字 */
+type ParticleKind = 'square' | 'smoke' | 'spark' | 'plus';
 
 interface Particle {
   kind: ParticleKind;
@@ -30,11 +30,29 @@ interface Ring {
   width: number;
 }
 
-/** 粒・煙・輪。戦場の座標で描く */
+/** かみなりの稲妻（点から点へ、ぎざぎざに走る） */
+interface Bolt {
+  points: { x: number; y: number }[];
+  t: number;
+  life: number;
+}
+
+/** 粒・煙・輪・稲妻。戦場の座標で描く */
 export class Effects {
   private particles: Particle[] = [];
   private rings: Ring[] = [];
+  private bolts: Bolt[] = [];
   private readonly rng = new Random(99);
+
+  /** かみなりの稲妻 */
+  zap(points: { x: number; y: number }[]): void {
+    this.bolts.push({ points, t: 0, life: 0.2 });
+  }
+
+  /** 十字の形のきらきら（ちゆ） */
+  plus(x: number, y: number, n: number, color = 0x7dffa0): void {
+    for (let i = 0; i < n; i++) this.spawn('plus', x, y, color, 70, 5, -60, this.rng.range(0.6, 1.0));
+  }
 
   /** 四角い粒を飛び散らせる */
   burst(x: number, y: number, color: number, n: number, speed: number, size: number): void {
@@ -68,9 +86,29 @@ export class Effects {
     this.particles = this.particles.filter((q) => q.t < q.life);
     for (const r of this.rings) r.t += dt;
     this.rings = this.rings.filter((r) => r.t < r.life);
+    for (const b of this.bolts) b.t += dt;
+    this.bolts = this.bolts.filter((b) => b.t < b.life);
   }
 
   draw(g: Phaser.GameObjects.Graphics): void {
+    for (const b of this.bolts) {
+      const a = 1 - b.t / b.life;
+      // 毎フレームぎざぎざを作り直して、ぱちぱち光って見せる
+      const path: { x: number; y: number }[] = [b.points[0]];
+      for (let i = 1; i < b.points.length; i++) {
+        const p0 = b.points[i - 1];
+        const p1 = b.points[i];
+        for (let k = 1; k <= 4; k++) {
+          const t = k / 5;
+          path.push({ x: p0.x + (p1.x - p0.x) * t + this.rng.range(-7, 7), y: p0.y + (p1.y - p0.y) * t + this.rng.range(-7, 7) });
+        }
+        path.push(p1);
+      }
+      g.lineStyle(7, 0xfff3a0, 0.35 * a);
+      g.strokePoints(path, false);
+      g.lineStyle(2.5, 0xffffff, a);
+      g.strokePoints(path, false);
+    }
     for (const r of this.rings) {
       const k = r.t / r.life;
       const e = 1 - (1 - k) * (1 - k);
@@ -82,6 +120,11 @@ export class Effects {
       if (q.kind === 'smoke') {
         g.fillStyle(q.color, 0.55 * (1 - k));
         g.fillCircle(q.x, q.y, q.size * (0.6 + k * 1.1));
+      } else if (q.kind === 'plus') {
+        const s = q.size;
+        g.fillStyle(q.color, 1 - k);
+        g.fillRect(q.x - s / 2, q.y - s * 1.5, s, s * 3);
+        g.fillRect(q.x - s * 1.5, q.y - s / 2, s * 3, s);
       } else if (q.kind === 'spark') {
         const s = q.size * (1 - k);
         g.fillStyle(q.color, 1 - k);

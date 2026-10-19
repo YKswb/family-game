@@ -13,11 +13,11 @@ import { House } from '../entities/House';
 import { Player } from '../entities/Player';
 import { Tree } from '../entities/Tree';
 import { Spot, paySpot } from './Build';
-import { damageTo, knockbackOf, type DamageSource } from './Combat';
+import { damageTo, fromFront, knockbackOf, shieldable, type DamageSource } from './Combat';
 import { updateEnemies } from './Enemies';
 import { Random } from './Random';
 import { placeTrees } from './Stage';
-import { updateShots, updateTowers, type Shot } from './Towers';
+import { updateShots, updateTowers, wallGuardAt, type Shot } from './Towers';
 import { applyPerk, baseModifiers, pickPerks, xpNeed, type Modifiers } from './Upgrades';
 import { spawnInterval, waveDirections, waveHpMul, waveList } from './Waves';
 
@@ -44,6 +44,19 @@ export type WorldEvent =
   | { type: 'waveClear'; n: number }
   | { type: 'levelUp'; level: number }
   | { type: 'xpBonus'; n: number }
+  /** かみなり：撃ち口から順にとんだ点 */
+  | { type: 'zap'; spot: Spot; points: { x: number; y: number }[] }
+  /** ちゆのとうが直した場所 */
+  | { type: 'mend'; x: number; y: number }
+  | { type: 'chill'; x: number; y: number; radius: number }
+  | { type: 'freeze'; enemy: Enemy }
+  /** たてで防いだ */
+  | { type: 'blocked'; enemy: Enemy }
+  /** 木こりが木を切り倒した */
+  | { type: 'stolen'; enemy: Enemy; tree: Tree }
+  /** 木こりが木を持って逃げきった */
+  | { type: 'escape'; enemy: Enemy }
+  | { type: 'healPulse'; enemy: Enemy; radius: number }
   | { type: 'won' }
   | { type: 'lost' };
 
@@ -52,8 +65,18 @@ export type Tutorial = 'move' | 'chop' | 'build' | 'done';
 export type Phase = 'prep' | 'fight';
 export type Outcome = 'playing' | 'won' | 'lost';
 
-/** 答えが出るまでゲームを止める選択。とうの種類と、レベルアップの強化 */
-export type Choice = { type: 'tower'; spot: Spot } | { type: 'perk'; options: Perk[] };
+/** 答えが出るまでゲームを止める選択。とうの種類、とうの分かれ道、レベルアップの強化 */
+export type Choice = { type: 'tower'; spot: Spot } | { type: 'branch'; spot: Spot } | { type: 'perk'; options: Perk[] };
+
+/** 大ほうの「もえる 地面」が残す火 */
+export interface Fire {
+  x: number;
+  y: number;
+  r: number;
+  dps: number;
+  /** 残りの秒数 */
+  t: number;
+}
 
 /** 倒した敵が落とした木材 */
 export interface Drop {
@@ -107,6 +130,7 @@ export class World {
   enemies: Enemy[] = [];
   shots: Shot[] = [];
   drops: Drop[] = [];
+  fires: Fire[] = [];
   /** このフレームで起きたこと（描画側が効果を出すのに使う） */
   readonly events: WorldEvent[] = [];
   readonly rng: Random;
@@ -236,6 +260,7 @@ export class World {
     this.updateSpots(dt);
     updateTowers(this, dt);
     updateShots(this, dt);
+    this.updateFires(dt);
     updateEnemies(this, dt);
     this.enemies = this.enemies.filter((e) => !e.dead);
     if (this.outcome !== 'playing') return;
@@ -252,6 +277,16 @@ export class World {
     if (!c || c.type !== 'tower') return;
     c.spot.kind = kind;
     c.spot.cd = this.data.towers.firstShotDelay;
+    this.choices.shift();
+    this.preparePerkChoice();
+  }
+
+  /** とうの分かれ道を決める（branches の添字） */
+  chooseBranch(index: number): void {
+    const c = this.choice;
+    if (!c || c.type !== 'branch' || !c.spot.kind) return;
+    if (!this.data.towers.kinds[c.spot.kind].branches[index]) return;
+    c.spot.branch = index;
     this.choices.shift();
     this.preparePerkChoice();
   }
@@ -332,7 +367,7 @@ export class World {
     let foe: Enemy | null = null;
     let best = pd.attackRange;
     for (const e of this.enemies) {
-      if (e.dead) continue;
+      if (!e.targetable) continue;
       const d = dist(p.x, p.y, e.x, e.y) - e.r;
       if (d < best) {
         best = d;
@@ -347,7 +382,7 @@ export class World {
       this.events.push({ type: 'attack' });
       const dmg = this.attackDamage;
       if (this.mods.area) {
-        for (const e of this.enemies.slice()) if (!e.dead && dist(p.x, p.y, e.x, e.y) - e.r < pd.areaRange) this.hurt(e, dmg, p.x, p.y, 'player');
+        for (const e of this.enemies.slice()) if (e.targetable && dist(p.x, p.y, e.x, e.y) - e.r < pd.areaRange) this.hurt(e, dmg, p.x, p.y, 'player');
       } else {
         this.hurt(foe, dmg, p.x, p.y, 'player');
       }
@@ -507,6 +542,7 @@ export class World {
       }
       case 'tower':
         if (s.level === 1) this.choices.push({ type: 'tower', spot: s });
+        else if (s.level === s.maxLevel && s.kind && this.data.towers.kinds[s.kind].branches.length > 0) this.choices.push({ type: 'branch', spot: s });
         break;
       default:
         break;
@@ -545,8 +581,17 @@ export class World {
   hurt(e: Enemy, dmg: number, fromX: number, fromY: number, src: DamageSource): void {
     if (e.dead) return;
     const ed = this.data.enemies;
-    e.hp -= damageTo(e.stats, dmg, src, ed);
-    e.hitF = 0.12;
+    let amount = damageTo(e.stats, dmg, src, ed);
+    if (e.stats.shield && shieldable(src) && fromFront(e.x, e.y, fromX, fromY, this.house.x, this.house.y, ed.common.shieldArc)) {
+      amount *= e.stats.shield;
+      this.events.push({ type: 'blocked', enemy: e });
+    }
+    e.hp -= amount;
+    // 火は毎フレーム少しずつ当たるので、点滅や粒は出さない
+    if (src !== 'fire') {
+      e.hitF = 0.12;
+      this.events.push({ type: 'hit', enemy: e });
+    }
     const kb = knockbackOf(e.stats, src, ed);
     if (kb > 0) {
       const dx = e.x - fromX;
@@ -555,11 +600,12 @@ export class World {
       e.kx += (dx / d) * kb;
       e.ky += (dy / d) * kb;
     }
-    this.events.push({ type: 'hit', enemy: e });
     if (e.hp > 0) return;
     e.dead = true;
     this.events.push({ type: 'death', enemy: e });
-    for (let i = 0; i < e.stats.drop; i++) {
+    // 木こりが持っていた木は、木材になって落ちる
+    const drops = e.stats.drop + e.carried * (this.data.trees.hp + this.data.trees.woodOnFell);
+    for (let i = 0; i < drops; i++) {
       const a = this.rng.range(0, Math.PI * 2);
       const v = this.rng.range(30, 90);
       this.drops.push({ x: e.x, y: e.y, z: 5, vz: this.rng.range(160, 230), vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0 });
@@ -575,13 +621,30 @@ export class World {
   explode(x: number, y: number, radius: number, dmg: number): void {
     this.events.push({ type: 'explode', x, y, radius });
     for (const e of this.enemies.slice()) {
-      if (e.dead || e.fly) continue;
+      if (!e.targetable || e.fly) continue;
       if (dist(e.x, e.y, x, y) < radius + e.r * 0.6) this.hurt(e, dmg, x, y, 'cannon');
     }
   }
 
+  /** 大ほうの「もえる 地面」：しばらく残る火を置く */
+  addFire(x: number, y: number, r: number, dps: number, time: number): void {
+    this.fires.push({ x, y, r, dps, t: time });
+  }
+
+  /** 火の上にいる地上の敵に、少しずつダメージを与える */
+  private updateFires(dt: number): void {
+    for (const f of this.fires) {
+      f.t -= dt;
+      for (const e of this.enemies.slice()) {
+        if (!e.targetable || e.fly) continue;
+        if (dist(e.x, e.y, f.x, f.y) < f.r + e.r * 0.5) this.hurt(e, f.dps * dt, f.x, f.y, 'fire');
+      }
+    }
+    this.fires = this.fires.filter((f) => f.t > 0);
+  }
+
   hitWall(s: Spot, dmg: number): void {
-    s.hp -= dmg;
+    s.hp -= dmg * wallGuardAt(this, s);
     s.hit = 0.15;
     this.events.push({ type: 'wallHit', spot: s });
     if (s.hp > 0) return;

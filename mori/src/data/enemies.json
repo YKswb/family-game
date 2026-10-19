@@ -16,7 +16,9 @@
     "splitKind": "mini",
     "splitCount": 2,
     "armorReduction": 0.5,
-    "speedJitter": 0.1
+    "speedJitter": 0.1,
+    "shieldArc": 0.5,
+    "burrowBand": [40, 55]
   },
   "kinds": {
     "slime": { "name": "スライム", "hp": 3, "speed": 40, "r": 16, "dmg": 1, "color": "#9b7bf2", "xp": 1, "drop": 1 },
@@ -27,6 +29,10 @@
     "knight": { "name": "よろいの騎士", "hp": 10, "speed": 34, "r": 19, "dmg": 2, "color": "#7d8aa0", "xp": 3, "drop": 3, "armor": true },
     "splitter": { "name": "分かれるスライム", "hp": 8, "speed": 34, "r": 24, "dmg": 2, "color": "#e07ad0", "xp": 2, "drop": 1, "split": true },
     "boss": { "name": "ボス", "hp": 45, "speed": 24, "r": 40, "dmg": 4, "color": "#e0457b", "xp": 15, "drop": 10, "boss": true },
-    "maou": { "name": "まおう", "hp": 160, "speed": 20, "r": 48, "dmg": 6, "color": "#4a2a6a", "xp": 30, "drop": 20, "boss": true, "summon": true }
+    "maou": { "name": "まおう", "hp": 160, "speed": 20, "r": 48, "dmg": 6, "color": "#4a2a6a", "xp": 30, "drop": 20, "boss": true, "summon": true },
+    "shield": { "name": "たて持ち", "hp": 6, "speed": 38, "r": 18, "dmg": 1, "color": "#c9874a", "xp": 2, "drop": 2, "shield": 0.15 },
+    "mole": { "name": "もぐら", "hp": 5, "speed": 46, "r": 15, "dmg": 2, "color": "#8a6248", "xp": 2, "drop": 1, "burrow": true },
+    "lumberjack": { "name": "木こりゴブリン", "hp": 6, "speed": 58, "r": 17, "dmg": 1, "color": "#6fae4c", "xp": 3, "drop": 2, "lumber": {"chops": 3, "interval": 0.8, "carry": 2, "search": 20} },
+    "healer": { "name": "いやしの魔法使い", "hp": 5, "speed": 34, "r": 16, "dmg": 1, "color": "#a26ad8", "xp": 3, "drop": 2, "healer": {"radius": 120, "interval": 2, "amount": 0.25, "standoff": 270} }
   }
 }

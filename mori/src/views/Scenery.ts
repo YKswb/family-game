@@ -135,7 +135,7 @@ export class Scenery {
       const show = !s.hidden && s.level > 0;
       img.setVisible(show);
       if (!show) continue;
-      const key = this.tex.towerKey(s.kind, s.level);
+      const key = this.tex.towerKey(s.kind, s.level, s.branch);
       if (img.texture.key !== key) img.setTexture(key);
       const k = 1 + (s.pop > 0 ? Math.sin((s.pop / 0.5) * Math.PI) * 0.18 : 0);
       img.setScale(k / TEX_SCALE, (2 - k) / TEX_SCALE);
@@ -171,16 +171,22 @@ export class Scenery {
       v.body.setVisible(inView);
       v.shadow.setVisible(inView);
       if (!inView) continue;
-      const key = this.tex.enemyKey(e.kind, e.fly ? wingFrame(e) : 0);
+      // もぐっている間は土の山だけを見せる
+      const key = e.underground
+        ? this.tex.moundKey(e.kind)
+        : this.tex.enemyKey(e.kind, e.fly ? wingFrame(e) : 0, Math.min(e.carried, e.stats.lumber?.carry ?? 0));
       if (v.body.texture.key !== key) v.body.setTexture(key);
-      const sq = e.fly ? 1 : enemySquash(e);
+      const sq = e.fly || e.underground || e.frozen > 0 ? 1 : enemySquash(e);
       v.body
         .setPosition(e.x, e.y - enemyLift(e))
         .setScale((2 - sq) / TEX_SCALE, sq / TEX_SCALE)
-        .setFlipX(e.face < 0)
+        .setFlipX(!e.underground && e.face < 0)
         .setDepth(depthOf(e.y));
+      v.shadow.setVisible(!e.underground);
       if (e.hitF > 0) v.body.setTintFill(0xffffff);
-      else if (e.slow > 0) v.body.setTint(0xa8e0ff);
+      // 色を掛け合わせるので、濃い青にすると敵の見分けがつかなくなる。明るい水色にとどめる
+      else if (e.frozen > 0) v.body.setTint(0xa8dcff);
+      else if (e.slow > 0) v.body.setTint(0xcdeeff);
       else v.body.clearTint();
       // 影の画像は 2 倍の画素で半径 34 × 12 なので、敵の大きさに合わせて伸ばす
       const rx = e.r * (e.fly ? 0.9 : 1.05);

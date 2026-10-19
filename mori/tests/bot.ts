@@ -16,7 +16,7 @@ export interface PlayStats {
 
 /** 建てる順番の重み（小さいほど先に建てる） */
 const PRIORITY: Record<Spot['type'], number> = { tower: 1, bag: 1.3, land: 1.6, axe: 1.8, wall: 2.2 };
-const TOWER_ORDER: TowerKind[] = ['arrow', 'cannon', 'arrow', 'ice', 'cannon', 'arrow', 'ice', 'arrow'];
+const TOWER_ORDER: TowerKind[] = ['arrow', 'cannon', 'lightning', 'arrow', 'ice', 'heal', 'cannon', 'arrow', 'lightning', 'ice', 'arrow'];
 const PERK_ORDER = ['tdmg', 'area', 'pdmg', 'chop', 'bag', 'heal', 'whp', 'dbl', 'speed', 'magnet'];
 
 /** 次に建てる地点。安くて大事なものから */
@@ -56,9 +56,10 @@ function threat(w: World): Enemy | null {
   let best: Enemy | null = null;
   let bd = Infinity;
   for (const e of w.enemies) {
-    if (e.dead) continue;
+    if (!e.targetable) continue;
     const d = Math.hypot(e.x - w.house.x, e.y - w.house.y);
-    if (d < w.territory && d < bd) {
+    // 領地の縁のすぐ外（木こりが木を切る場所）までは、斧が届く
+    if (d < w.territory + 60 && d < bd) {
       bd = d;
       best = e;
     }
@@ -71,7 +72,13 @@ function answer(w: World, towers: { n: number }): void {
   const c = w.choice;
   if (!c) return;
   if (c.type === 'tower') {
-    w.chooseTower(TOWER_ORDER[towers.n++ % TOWER_ORDER.length]);
+    // このステージで建てられる種類だけを、決まった順に
+    const order = TOWER_ORDER.filter((k) => w.stage.towers.includes(k));
+    w.chooseTower(order[towers.n++ % order.length]);
+    return;
+  }
+  if (c.type === 'branch') {
+    w.chooseBranch(towers.n++ % 2);
     return;
   }
   let pick = 0;

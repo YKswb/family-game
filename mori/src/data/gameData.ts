@@ -2,14 +2,29 @@ import buildingsJson from './buildings.json';
 import difficultyJson from './difficulty.json';
 import enemiesJson from './enemies.json';
 import playerJson from './player.json';
+import practiceJson from './stages/practice.json';
 import stage1Json from './stages/stage1.json';
 import towersJson from './towers.json';
 import treesJson from './trees.json';
 import upgradesJson from './upgrades.json';
 
 export type BuildingType = 'axe' | 'bag' | 'tower' | 'wall' | 'land';
-export type TowerKind = 'arrow' | 'cannon' | 'ice';
-export type EnemyKind = 'slime' | 'mini' | 'goblin' | 'bat' | 'wolf' | 'knight' | 'splitter' | 'boss' | 'maou';
+export type TowerKind = 'arrow' | 'cannon' | 'ice' | 'lightning' | 'heal';
+export const TOWER_KINDS: TowerKind[] = ['arrow', 'cannon', 'ice', 'lightning', 'heal'];
+export type EnemyKind =
+  | 'slime'
+  | 'mini'
+  | 'goblin'
+  | 'bat'
+  | 'wolf'
+  | 'knight'
+  | 'splitter'
+  | 'boss'
+  | 'maou'
+  | 'shield'
+  | 'mole'
+  | 'lumberjack'
+  | 'healer';
 
 export interface PlayerData {
   speed: number;
@@ -90,6 +105,17 @@ export interface EnemyStats {
   boss?: boolean;
   /** ときどきスライムを呼ぶ */
   summon?: boolean;
+  /** たて：正面（おうちの方）から来た矢と氷の玉のダメージをこの倍率にする */
+  shield?: number;
+  /** もぐら：かべの下をくぐる。くぐっている間は攻撃が当たらない */
+  burrow?: boolean;
+  /**
+   * 木こり：森の木を切り倒し、carry 本持ったら逃げていく。
+   * 狙うのは「領地の縁＋search」までの木（主人公が切れて、主人公が止めに行ける木）
+   */
+  lumber?: { chops: number; interval: number; carry: number; search: number };
+  /** いやし：おうちから standoff の所で止まり、まわりの敵の HP を回復する */
+  healer?: { radius: number; interval: number; amount: number; standoff: number };
 }
 
 export interface EnemyData {
@@ -112,6 +138,10 @@ export interface EnemyData {
     splitCount: number;
     armorReduction: number;
     speedJitter: number;
+    /** たての正面とみなす向きの広さ（向きのずれの cos がこれより大きい） */
+    shieldArc: number;
+    /** もぐらがもぐっている帯（かべの輪の内側・外側にどれだけ広げるか） */
+    burrowBand: [number, number];
   };
   kinds: Record<EnemyKind, EnemyStats>;
 }
@@ -130,6 +160,40 @@ export interface TowerStats {
   air: boolean;
   splash?: number[];
   slow?: number[];
+  /** かみなり：電気がとぶ数（最初の敵を含む）と、とぶ距離、とぶたびのダメージの倍率 */
+  chain?: number[];
+  chainRange?: number;
+  chainFalloff?: number;
+  /** ちゆ：攻撃せず、かべを直す量（1回あたり）と、おうちを直す量 */
+  support?: boolean;
+  heal?: number[];
+  houseHeal?: number;
+  /** レベル3で選ぶ2つの道 */
+  branches: TowerBranch[];
+}
+
+/** とうのレベル3の分かれ道。書いてある効果だけが、そのとうに加わる */
+export interface TowerBranch {
+  id: string;
+  icon: string;
+  name: string;
+  desc: string;
+  intervalMul?: number;
+  rangeAdd?: number;
+  damageMul?: number;
+  splashAdd?: number;
+  /** 爆発のあとに残る火（1秒あたりのダメージ、残る秒数、半径） */
+  burn?: { dps: number; time: number; radius: number };
+  /** 当たったまわりの敵も遅くする半径 */
+  slowArea?: number;
+  /** ときどき敵を止める */
+  freeze?: { chance: number; time: number };
+  chainAdd?: number;
+  /** 空の敵へのダメージの倍率 */
+  airMul?: number;
+  healMul?: number;
+  /** 範囲内のかべが受けるダメージの倍率 */
+  wallGuard?: number;
 }
 
 export interface TowerData {
@@ -231,6 +295,8 @@ export interface StageData {
   name: string;
   /** 最初の準備時間に出すヒント */
   tip: string;
+  /** このステージで建てられるとうの種類（建てたときの選択肢の順） */
+  towers: TowerKind[];
   theme: StageTheme;
   width: number;
   height: number;
@@ -274,3 +340,6 @@ export const GAME_DATA: GameData = {
 
 // JSON の配列は TypeScript では組（[number, number]）と見なされないので、unknown を経由する
 export const STAGES: StageData[] = [stage1Json as unknown as StageData];
+
+/** 新しいとうと敵を試すための練習の森（URL の ?stage=practice で遊べる） */
+export const PRACTICE_STAGE = practiceJson as unknown as StageData;
