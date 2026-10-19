@@ -1,17 +1,22 @@
 import Phaser from 'phaser';
 import { SOLDIER_KINDS, UNIT_DATA, type SoldierKind } from '../data/unitData';
-import { drawArrow, drawTree, drawUnit } from '../entities/UnitView';
+import { drawArrow, drawFlag, drawTree, drawUnit } from '../entities/UnitView';
 import type { Squad } from '../entities/Squad';
 import type { Unit } from '../entities/Unit';
-import { ARENA, arenaConfig } from '../systems/Arena';
+import { ARENA, arenaConfig, practiceConfig } from '../systems/Arena';
 import { Random } from '../systems/Random';
 import { World, type WorldEvent } from '../systems/World';
 import { Button } from '../ui/Button';
 import { DPR, TEXT, VIEW_H, VIEW_W, WORLD_ZOOM, fmt, textStyle } from '../ui/Display';
 import { Hud } from '../ui/Hud';
 import { Joystick } from '../ui/Joystick';
+import { Minimap } from '../ui/Minimap';
+
+/** squad: 部隊の練習場（旗の部隊を集めて戦う）、duel: 相性の練習場（1部隊対1部隊） */
+type PracticeMode = 'squad' | 'duel';
 
 interface BattleData {
+  mode?: PracticeMode;
   allyKind?: SoldierKind;
   enemyKind?: SoldierKind;
 }
@@ -33,10 +38,19 @@ interface Popup {
 }
 
 const POPUP_LIFE = 1.2;
+const BANNER_LIFE = 2.2;
 
-/** 練習場：ジャンが率いる1部隊と敵1部隊を戦わせ、兵種の相性を試す */
+const ORDER_COLORS = {
+  // 押すと「とつげき」になるボタン（いまは しゅうごう）
+  toCharge: { color: 0xd94f3a, shadow: 0x9c3426 },
+  // 押すと「しゅうごう」になるボタン（いまは とつげき）
+  toGather: { color: 0x2f6fd6, shadow: 0x1d4a94 },
+};
+
+/** 練習場：部隊を集めて戦う／兵種の相性を試す */
 export class BattleScene extends Phaser.Scene {
   private world!: World;
+  private mode: PracticeMode = 'squad';
   private allyKind: SoldierKind = 'sword';
   private enemyKind: SoldierKind = 'spear';
 
@@ -44,7 +58,11 @@ export class BattleScene extends Phaser.Scene {
   private unitGfx!: Phaser.GameObjects.Graphics;
   private fxGfx!: Phaser.GameObjects.Graphics;
   private hud!: Hud;
+  private minimap: Minimap | null = null;
   private joystick!: Joystick;
+  private orderButton!: Button;
+  private banner!: Phaser.GameObjects.Text;
+  private bannerT = BANNER_LIFE;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private squadLabels = new Map<Squad, Phaser.GameObjects.Text>();
   private particles: Particle[] = [];
@@ -59,16 +77,20 @@ export class BattleScene extends Phaser.Scene {
   }
 
   init(data: BattleData): void {
+    this.mode = data.mode ?? this.mode;
     this.allyKind = data.allyKind ?? this.allyKind;
     this.enemyKind = data.enemyKind ?? this.enemyKind;
     this.squadLabels = new Map();
     this.particles = [];
     this.popups = [];
+    this.minimap = null;
+    this.bannerT = BANNER_LIFE;
     this.resultShown = false;
   }
 
   create(): void {
-    this.world = new World(arenaConfig(this.allyKind, this.enemyKind, Date.now() % 100000));
+    const seed = Date.now() % 100000;
+    this.world = new World(this.mode === 'squad' ? practiceConfig(seed) : arenaConfig(this.allyKind, this.enemyKind, seed));
     this.input.addPointer(2);
 
     // 画面を内部で DPR 倍に描くので、カメラも同じ倍率で拡大する（左上を原点に）
@@ -80,16 +102,29 @@ export class BattleScene extends Phaser.Scene {
     this.unitGfx = this.toWorld(this.add.graphics());
     this.fxGfx = this.toWorld(this.add.graphics());
     for (const sq of this.world.squads) {
-      this.squadLabels.set(sq, this.toWorld(this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5)));
+      this.squadLabels.set(sq, this.toWorld(this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5, 1).setAlign('center')));
     }
 
     this.hud = new Hud(this);
     this.toUi(...this.hud.objects);
     this.joystick = new Joystick(this);
     this.toUi(this.joystick.gfx);
-    this.createPicker();
+    if (this.mode === 'squad') {
+      const w = 260;
+      this.minimap = new Minimap(this, VIEW_W - 24 - w, 22, w, this.world);
+      this.toUi(this.minimap.gfx);
+    } else {
+      this.createPicker();
+    }
+    this.createModeSwitch();
+    this.createCommandButtons();
+    this.banner = this.add.text(VIEW_W / 2, VIEW_H * 0.3, '', textStyle(40, '#ffd84d')).setOrigin(0.5).setDepth(950).setAlpha(0);
+    this.toUi(this.banner);
+    if (this.mode === 'squad') this.showBanner(TEXT.squadPracticeHint, '#ffffff', 30);
 
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.input.keyboard!.on('keydown-SPACE', () => this.command(() => this.world.toggleOrder()));
+    this.input.keyboard!.on('keydown-F', () => this.command(() => this.world.whistle()));
 
     this.camX = this.world.hero.x;
     this.camY = this.world.hero.y;
@@ -111,6 +146,7 @@ export class BattleScene extends Phaser.Scene {
     this.updateEffects(dt);
     this.render();
     this.hud.update(w);
+    this.minimap?.update(w, this.viewRect());
     this.joystick.draw();
     this.updateCamera(dt);
   }
@@ -134,17 +170,18 @@ export class BattleScene extends Phaser.Scene {
     const g = this.toWorld(this.add.graphics());
     const rng = new Random(7);
     const { width, height } = this.world;
+    const area = (width * height) / (2400 * 1600);
     g.fillStyle(0x6fb352, 1);
     g.fillRect(0, 0, width, height);
     g.fillStyle(0x3c7832, 0.22);
-    for (let i = 0; i < 30; i++) g.fillEllipse(rng.range(0, width), rng.range(0, height), rng.range(160, 440), rng.range(100, 280));
-    for (let i = 0; i < 700; i++) {
+    for (let i = 0; i < 30 * area; i++) g.fillEllipse(rng.range(0, width), rng.range(0, height), rng.range(160, 440), rng.range(100, 280));
+    for (let i = 0; i < 700 * area; i++) {
       g.fillStyle(i % 2 ? 0x5f9a45 : 0x7db85c, 1);
       const s = rng.range(3, 7);
       g.fillEllipse(rng.range(0, width), rng.range(0, height), s * 2, s);
     }
     const flowers = [0xffffff, 0xffd84d, 0xff9ec4];
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 120 * area; i++) {
       g.fillStyle(flowers[i % 3], 1);
       g.fillCircle(rng.range(0, width), rng.range(0, height), 3);
     }
@@ -162,16 +199,21 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** いま見えている戦場の範囲（カメラは左上を原点に拡大しているので、Phaser の worldView は使わない） */
+  private viewRect(): { x: number; y: number; w: number; h: number } {
+    const cam = this.cameras.main;
+    return { x: cam.scrollX, y: cam.scrollY, w: VIEW_W / WORLD_ZOOM, h: VIEW_H / WORLD_ZOOM };
+  }
+
   private render(): void {
     const w = this.world;
     const g = this.unitGfx;
     g.clear();
-    // カメラは左上を原点に拡大しているので、Phaser の worldView（中心基準）は使わず、見えている範囲を自分で求める
-    const cam = this.cameras.main;
-    const x0 = cam.scrollX - 60;
-    const y0 = cam.scrollY - 60;
-    const x1 = cam.scrollX + VIEW_W / WORLD_ZOOM + 60;
-    const y1 = cam.scrollY + VIEW_H / WORLD_ZOOM + 80;
+    const v = this.viewRect();
+    const x0 = v.x - 60;
+    const y0 = v.y - 60;
+    const x1 = v.x + v.w + 60;
+    const y1 = v.y + v.h + 120;
     const alive: Unit[] = [];
     for (const u of w.units) {
       if (u.dead) continue;
@@ -181,6 +223,12 @@ export class BattleScene extends Phaser.Scene {
     alive.sort((a, b) => a.y - b.y);
     for (const u of alive) drawUnit(g, u);
     for (const a of w.arrows) drawArrow(g, a);
+    for (const sq of w.squads) {
+      if (sq.mode === 'neutral' && sq.aliveCount > 0) {
+        const c = sq.center();
+        drawFlag(g, c.x, c.y - 26, w.time);
+      }
+    }
 
     for (const [sq, label] of this.squadLabels) {
       const n = sq.aliveCount;
@@ -188,9 +236,19 @@ export class BattleScene extends Phaser.Scene {
       if (!n) continue;
       const c = sq.center();
       const stats = UNIT_DATA.kinds[sq.kind];
-      label.setText(`${stats.short} ${n}`);
-      label.setColor(sq.side === 'ally' ? '#bcd6ff' : '#ffc4bd');
-      label.setPosition(c.x, c.y - 52);
+      if (sq.mode === 'neutral') {
+        label.setText(`${stats.name}\n${TEXT.flag}`);
+        label.setColor('#ffffff');
+        label.setPosition(c.x, c.y - 96);
+      } else if (sq.waiting) {
+        label.setText(`${stats.short} ${n} ${TEXT.waiting}`);
+        label.setColor('#d6e4ff');
+        label.setPosition(c.x, c.y - 40);
+      } else {
+        label.setText(`${stats.short} ${n}`);
+        label.setColor(sq.side === 'ally' ? '#bcd6ff' : '#ffc4bd');
+        label.setPosition(c.x, c.y - 40);
+      }
     }
 
     const f = this.fxGfx;
@@ -217,14 +275,37 @@ export class BattleScene extends Phaser.Scene {
 
   private onEvent(e: WorldEvent): void {
     const rng = this.fxRng;
-    if (e.type === 'hit') {
-      this.burst(e.x, e.y - 10, 0xffffff, 3, 80, 3);
-      if (e.charge) this.popup(e.x, e.y - 40, TEXT.charge, '#ffb347');
-      else if (e.multiplier > 1 && rng.next() < 0.3) this.popup(e.x, e.y - 34, TEXT.hitStrong, '#ffd84d');
-      else if (e.multiplier < 1 && rng.next() < 0.2) this.popup(e.x, e.y - 34, TEXT.hitWeak, '#c9d4e8');
-    } else if (e.type === 'death') {
-      this.burst(e.x, e.y - 8, e.side === 'ally' ? 0x4f8dff : 0xff5a4f, 12, 150, 4);
+    switch (e.type) {
+      case 'hit':
+        this.burst(e.x, e.y - 10, 0xffffff, 3, 80, 3);
+        if (e.charge) this.popup(e.x, e.y - 40, TEXT.charge, '#ffb347');
+        else if (e.multiplier > 1 && rng.next() < 0.3) this.popup(e.x, e.y - 34, TEXT.hitStrong, '#ffd84d');
+        else if (e.multiplier < 1 && rng.next() < 0.2) this.popup(e.x, e.y - 34, TEXT.hitWeak, '#c9d4e8');
+        break;
+      case 'death':
+        this.burst(e.x, e.y - 8, e.side === 'ally' ? 0x4f8dff : 0xff5a4f, 12, 150, 4);
+        break;
+      case 'recruit': {
+        const name = UNIT_DATA.kinds[e.squad.kind].name;
+        if (e.waiting) this.showBanner(fmt(TEXT.recruitedWaiting, { name }), '#d6e4ff');
+        else this.showBanner(fmt(TEXT.recruited, { name }), '#ffd84d');
+        const c = e.squad.center();
+        this.burst(c.x, c.y - 20, 0x4f8dff, 20, 200, 5);
+        break;
+      }
+      case 'order':
+        this.showBanner(e.order === 'charge' ? TEXT.toCharge : TEXT.toGather, e.order === 'charge' ? '#ffb0a8' : '#bcd6ff');
+        this.refreshOrderButton();
+        break;
+      case 'whistle':
+        this.showBanner(TEXT.whistleCall, '#ffe066');
+        break;
     }
+  }
+
+  private showBanner(s: string, color: string, size = 40): void {
+    this.banner.setText(s).setColor(color).setFontSize(size).setAlpha(1);
+    this.bannerT = 0;
   }
 
   private burst(x: number, y: number, color: number, n: number, speed: number, size: number): void {
@@ -267,9 +348,81 @@ export class BattleScene extends Phaser.Scene {
       if (p.t >= POPUP_LIFE) p.text.destroy();
     }
     this.popups = this.popups.filter((p) => p.t < POPUP_LIFE);
+    if (this.bannerT < BANNER_LIFE) {
+      this.bannerT += dt;
+      this.banner.setAlpha(Math.min(1, (BANNER_LIFE - this.bannerT) / 0.5));
+    }
   }
 
-  // ---- 練習場の兵種えらび ----
+  // ---- ボタン ----
+
+  /** 右下：命令の切り替えと集合の笛 */
+  private createCommandButtons(): void {
+    const x = VIEW_W - 150;
+    const c = ORDER_COLORS.toCharge;
+    this.orderButton = new Button(this, {
+      x,
+      y: VIEW_H - 84,
+      w: 250,
+      h: 104,
+      label: TEXT.toCharge,
+      fontSize: 38,
+      color: c.color,
+      shadow: c.shadow,
+      onTap: () => this.command(() => this.world.toggleOrder()),
+    });
+    const whistle = new Button(this, {
+      x,
+      y: VIEW_H - 214,
+      w: 250,
+      h: 86,
+      label: TEXT.whistle,
+      fontSize: 32,
+      color: 0xd9a21c,
+      shadow: 0x8f6a10,
+      onTap: () => this.command(() => this.world.whistle()),
+    });
+    this.toUi(...this.orderButton.objects, ...whistle.objects);
+    this.refreshOrderButton();
+  }
+
+  /**
+   * ボタンやキーからの命令。World のイベントは次の step の初めに消されるので、
+   * 命令で起きたイベントはここですぐに画面へ反映する
+   */
+  private command(fn: () => void): void {
+    const w = this.world;
+    if (w.outcome !== 'playing') return;
+    const n = w.events.length;
+    fn();
+    for (const e of w.events.slice(n)) this.onEvent(e);
+  }
+
+  /** 命令ボタンには「押すとどうなるか」を出す */
+  private refreshOrderButton(): void {
+    const charging = this.world.order === 'charge';
+    const c = charging ? ORDER_COLORS.toGather : ORDER_COLORS.toCharge;
+    this.orderButton.setLabel(charging ? TEXT.toGather : TEXT.toCharge).setColors(c.color, c.shadow);
+  }
+
+  /** 上のまんなか：2つの練習場を切り替える */
+  private createModeSwitch(): void {
+    const toSquad = this.mode === 'duel';
+    const b = new Button(this, {
+      x: VIEW_W / 2,
+      y: 40,
+      w: 250,
+      h: 56,
+      label: toSquad ? TEXT.toSquadPractice : TEXT.toDuelPractice,
+      fontSize: 24,
+      color: 0x7a5bc7,
+      shadow: 0x4f3a87,
+      onTap: () => this.scene.restart({ mode: toSquad ? 'squad' : 'duel', allyKind: this.allyKind, enemyKind: this.enemyKind }),
+    });
+    this.toUi(...b.objects);
+  }
+
+  // ---- 相性の練習場の兵種えらび ----
 
   private createPicker(): void {
     const size = 66;
@@ -319,7 +472,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private restartWith(allyKind: SoldierKind, enemyKind: SoldierKind): void {
-    this.scene.restart({ allyKind, enemyKind });
+    this.scene.restart({ mode: this.mode, allyKind, enemyKind });
   }
 
   private showResult(): void {
@@ -337,12 +490,13 @@ export class BattleScene extends Phaser.Scene {
       .text(VIEW_W / 2, VIEW_H / 2 - 110, won ? TEXT.win : TEXT.lose, textStyle(52, won ? '#d94f3a' : '#3b4a66', false))
       .setOrigin(0.5)
       .setDepth(1101);
+    const survivors = this.mode === 'squad' ? w.countFollowing() : w.countAlive('ally');
     const sub = this.add
-      .text(VIEW_W / 2, VIEW_H / 2 - 30, fmt(TEXT.survivors, { n: w.countAlive('ally') }), textStyle(28, '#2b2418', false))
+      .text(VIEW_W / 2, VIEW_H / 2 - 30, fmt(TEXT.survivors, { n: survivors }), textStyle(28, '#2b2418', false))
       .setOrigin(0.5)
       .setDepth(1101);
     const hint = this.add
-      .text(VIEW_W / 2, VIEW_H / 2 + 20, matchupHint(this.allyKind, this.enemyKind), textStyle(24, '#6e6250', false))
+      .text(VIEW_W / 2, VIEW_H / 2 + 20, this.mode === 'duel' ? matchupHint(this.allyKind, this.enemyKind) : '', textStyle(24, '#6e6250', false))
       .setOrigin(0.5)
       .setDepth(1101);
     const btn = new Button(this, {

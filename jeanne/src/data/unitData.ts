@@ -31,6 +31,9 @@ export interface UnitStats {
   chargeMultiplier?: number;
   regenDelay?: number;
   regenPerSecond?: number;
+  /** 率いられる部隊の数（ジャン） */
+  leadership?: number;
+  leadershipMax?: number;
   auraRadius?: number;
   auraBonus?: number;
 }
@@ -85,6 +88,14 @@ export interface UnitData {
     returnSpeedMultiplier: number;
     /** 弓兵が近づかれて後ずさりするときの速さ */
     retreatSpeedMultiplier: number;
+    /** 旗の部隊の中心からこの距離までジャンが近づくと仲間になる */
+    recruitRadius: number;
+    /** 集合の笛で戦いをやめて戻る秒数 */
+    whistleSeconds: number;
+    /** 弓兵はジャンの位置からこれだけ後ろの線より前に出ない */
+    archerLineMargin: number;
+    /** ジャンの進行方向（隊列の向き）が1秒に回る角度（ラジアン） */
+    headingTurnRate: number;
   };
 }
 

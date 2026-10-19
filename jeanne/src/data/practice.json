@@ -1,0 +1,31 @@
+{
+  "width": 3200,
+  "height": 2000,
+  "groundColor": "#6fb352",
+  "hero": { "x": 300, "y": 1000, "dir": [1, 0] },
+  "squads": [
+    { "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 650, "y": 780 },
+    { "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 650, "y": 1220 },
+    { "side": "ally", "mode": "neutral", "kind": "archer", "count": 10, "x": 950, "y": 1000 },
+    { "side": "ally", "mode": "neutral", "kind": "cavalry", "count": 10, "x": 1150, "y": 650 },
+    { "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 1150, "y": 1350 },
+
+    { "side": "enemy", "mode": "hold", "kind": "sword", "count": 10, "x": 1850, "y": 800, "dir": [-1, 0] },
+    { "side": "enemy", "mode": "hold", "kind": "spear", "count": 10, "x": 1850, "y": 1250, "dir": [-1, 0] },
+    { "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 10, "x": 2300, "y": 1000, "dir": [-1, 0] },
+    { "side": "enemy", "mode": "hold", "kind": "archer", "count": 10, "x": 2650, "y": 750, "dir": [-1, 0] },
+    { "side": "enemy", "mode": "hold", "kind": "archer", "count": 10, "x": 2650, "y": 1250, "dir": [-1, 0] },
+    { "side": "enemy", "mode": "hold", "kind": "sword", "count": 10, "x": 2900, "y": 1000, "dir": [-1, 0] }
+  ],
+  "trees": [
+    { "x": 300, "y": 350, "r": 130 },
+    { "x": 350, "y": 1650, "r": 120 },
+    { "x": 1500, "y": 350, "r": 110 },
+    { "x": 1500, "y": 1650, "r": 120 },
+    { "x": 1550, "y": 1000, "r": 70 },
+    { "x": 2300, "y": 400, "r": 110 },
+    { "x": 2300, "y": 1600, "r": 110 },
+    { "x": 3000, "y": 300, "r": 120 },
+    { "x": 3000, "y": 1700, "r": 120 }
+  ]
+}

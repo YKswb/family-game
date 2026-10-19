@@ -25,7 +25,7 @@ export class Button {
 
   constructor(
     scene: Phaser.Scene,
-    private readonly o: ButtonOptions,
+    private o: ButtonOptions,
   ) {
     const depth = o.depth ?? 900;
     this.gfx = scene.add.graphics().setDepth(depth);
@@ -53,6 +53,18 @@ export class Button {
 
   get objects(): Phaser.GameObjects.GameObject[] {
     return [this.gfx, this.text, this.zone];
+  }
+
+  setLabel(label: string): this {
+    this.text.setText(label);
+    return this;
+  }
+
+  setColors(color: number, shadow: number): this {
+    this.o.color = color;
+    this.o.shadow = shadow;
+    this.redraw();
+    return this;
   }
 
   setSelected(v: boolean): this {

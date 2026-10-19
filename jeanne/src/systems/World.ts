@@ -41,7 +41,10 @@ export type WorldEvent =
   | { type: 'hit'; x: number; y: number; side: Side; multiplier: number; charge: boolean }
   | { type: 'death'; x: number; y: number; side: Side; kind: UnitKind }
   | { type: 'shoot'; x: number; y: number }
-  | { type: 'squadWiped'; squad: Squad };
+  | { type: 'squadWiped'; squad: Squad }
+  | { type: 'recruit'; squad: Squad; waiting: boolean }
+  | { type: 'order'; order: Order }
+  | { type: 'whistle' };
 
 export interface Arrow {
   x: number;
@@ -71,6 +74,10 @@ export class World {
 
   time = 0;
   order: Order = 'gather';
+  /** 率いられる部隊の数 */
+  leadership: number;
+  /** 集合の笛の効果が残っている秒数 */
+  recallTime = 0;
   outcome: Outcome = 'playing';
   /** 移動の入力（長さ0〜1） */
   input = { x: 0, y: 0 };
@@ -81,6 +88,7 @@ export class World {
   readonly grid: SpatialGrid<Unit>;
   readonly rng: Random;
   private nextId = 0;
+  private nextFollowIndex = 0;
 
   constructor(cfg: WorldConfig) {
     this.data = cfg.data ?? UNIT_DATA;
@@ -90,6 +98,7 @@ export class World {
     this.rng = new Random(cfg.seed ?? 1);
     this.grid = new SpatialGrid<Unit>(cfg.width, cfg.height, this.data.ai.gridCell);
     this.hero = new Hero(this.nextId++, this.data.kinds.hero, cfg.hero.x, cfg.hero.y);
+    this.leadership = this.data.kinds.hero.leadership ?? 3;
     this.units.push(this.hero);
     if (cfg.heroDir) [this.headX, this.headY] = cfg.heroDir;
     for (const s of cfg.squads) this.addSquad(s);
@@ -113,7 +122,7 @@ export class World {
       sq.units.push(u);
       this.units.push(u);
     }
-    sq.followIndex = this.squads.filter((s) => s.mode === 'follow').length;
+    if (spec.mode === 'follow') sq.followIndex = this.nextFollowIndex++;
     this.squads.push(sq);
     layoutSquad(sq, spec.x, spec.y, dx, dy, this.data.ai.formationSpacing, this.data.ai.formationColumns);
     for (const u of sq.units) {
@@ -128,12 +137,16 @@ export class World {
     this.time += dt;
     this.grid.rebuild(this.aliveUnits());
     this.updateHero(dt);
+    this.recallTime = Math.max(0, this.recallTime - dt);
+    this.updateRecruit();
     updateFollowSquads(this);
     for (const sq of this.squads) if (sq.mode === 'hold') updateHoldSquad(this, sq);
+    this.markArcherLine();
     for (const u of this.units) {
       if (!u.dead && u.squad) updateSoldier(this, u, dt);
     }
     this.separate();
+    this.enforceArcherLine();
     this.updateArrows(dt);
     this.checkOutcome();
   }
@@ -165,7 +178,7 @@ export class World {
     let any: Unit | null = null;
     let anyD = radius;
     this.grid.forEachNear(x, y, radius + 20, (o) => {
-      if (o.dead || o.side === side) return;
+      if (o.dead || o.side === side || o.squad?.mode === 'neutral') return;
       const d = this.targetDistance(x, y, o);
       if (d < anyD) {
         anyD = d;
@@ -202,6 +215,102 @@ export class World {
   /** 狙う相手を選ぶときの距離（体の大きさを引き、ジャンは少し遠い扱い） */
   targetDistance(x: number, y: number, o: Unit): number {
     return dist(x, y, o.x, o.y) - o.radius + (o.kind === 'hero' ? this.data.ai.heroTargetPenalty : 0);
+  }
+
+  // ---- 部隊の運用 ----
+
+  /** ジャンが率いている（生き残りのいる）部隊 */
+  followingSquads(): Squad[] {
+    return this.squads.filter((s) => s.mode === 'follow' && s.aliveCount > 0);
+  }
+
+  /** ジャンが率いている兵士の数 */
+  countFollowing(): number {
+    let n = 0;
+    for (const sq of this.followingSquads()) n += sq.aliveCount;
+    return n;
+  }
+
+  /**
+   * 旗の部隊（または待機中の仲間）にジャンが触れたら仲間にする。
+   * 率いられる数を超えるときは、その場で待機させる
+   */
+  private updateRecruit(): void {
+    const h = this.hero;
+    if (h.dead) return;
+    const r = this.data.ai.recruitRadius;
+    for (const sq of this.squads) {
+      if (sq.mode !== 'neutral' && !sq.waiting) continue;
+      if (sq.aliveCount === 0) continue;
+      const c = sq.center();
+      if (dist(h.x, h.y, c.x, c.y) > r) continue;
+      if (this.followingSquads().length < this.leadership) {
+        sq.mode = 'follow';
+        sq.waiting = false;
+        sq.alert = false;
+        sq.followIndex = this.nextFollowIndex++;
+        this.events.push({ type: 'recruit', squad: sq, waiting: false });
+      } else if (sq.mode === 'neutral') {
+        // 上限を超えたので、旗を下ろしてその場を守る
+        sq.mode = 'hold';
+        sq.waiting = true;
+        this.events.push({ type: 'recruit', squad: sq, waiting: true });
+      }
+    }
+  }
+
+  setOrder(order: Order): void {
+    if (this.order === order) return;
+    this.order = order;
+    this.events.push({ type: 'order', order });
+  }
+
+  toggleOrder(): void {
+    this.setOrder(this.order === 'charge' ? 'gather' : 'charge');
+  }
+
+  /** 集合の笛：率いている全部隊が戦いをやめてジャンのもとへ戻る（命令は「しゅうごう」になる） */
+  whistle(): void {
+    this.recallTime = this.data.ai.whistleSeconds;
+    for (const sq of this.followingSquads()) {
+      for (const u of sq.units) {
+        if (u.dead) continue;
+        this.setTarget(u, null);
+        u.retargetIn = this.recallTime;
+      }
+    }
+    this.setOrder('gather');
+    this.events.push({ type: 'whistle' });
+  }
+
+  /** ジャンの進行方向に沿った前後の位置（前がプラス） */
+  forwardOf(u: Unit): number {
+    return (u.x - this.hero.x) * this.headX + (u.y - this.hero.y) * this.headY;
+  }
+
+  private isLineBound(u: Unit): boolean {
+    return !u.dead && u.isRanged && u.squad?.mode === 'follow';
+  }
+
+  private markArcherLine(): void {
+    for (const u of this.units) if (this.isLineBound(u)) u.lineF = this.forwardOf(u);
+  }
+
+  /**
+   * 弓兵の後方ルール：率いている弓兵は「ジャンの位置から少し後ろの線」より前に出ない。
+   * ジャンが向きを変えた直後など、すでに線より前にいる弓兵は、それ以上前に出られないだけにする
+   */
+  private enforceArcherLine(): void {
+    const limit = -this.data.ai.archerLineMargin;
+    for (const u of this.units) {
+      if (!this.isLineBound(u)) continue;
+      const allowed = Math.max(limit, u.lineF);
+      const f = this.forwardOf(u);
+      if (f > allowed) {
+        u.x -= this.headX * (f - allowed);
+        u.y -= this.headY * (f - allowed);
+      }
+    }
   }
 
   /** attacker の一撃（近接・矢の両方）を target に当てる */
@@ -270,13 +379,16 @@ export class World {
       h.y += iy * h.speed * dt;
       h.bob += dt * 12;
       if (Math.abs(ix) > 0.1) h.face = ix > 0 ? 1 : -1;
-      // 進行方向はなめらかに追従させる（隊列が急に入れ替わらないように）
-      const k = Math.min(1, dt * 4);
-      this.headX += (ix / m - this.headX) * k;
-      this.headY += (iy / m - this.headY) * k;
-      const l = Math.hypot(this.headX, this.headY) || 1;
-      this.headX /= l;
-      this.headY /= l;
+      // 進行方向は一定の速さで回して追従させる（隊列が急に入れ替わらないように）。
+      // 真後ろへ引き返したときも回るよう、ベクトルを混ぜるのではなく角度で回す
+      const cur = Math.atan2(this.headY, this.headX);
+      let diff = Math.atan2(iy, ix) - cur;
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      const maxTurn = this.data.ai.headingTurnRate * dt;
+      const a = cur + Math.max(-maxTurn, Math.min(maxTurn, diff));
+      this.headX = Math.cos(a);
+      this.headY = Math.sin(a);
     }
 
     // 3秒ダメージを受けなければ回復

@@ -55,7 +55,9 @@
       "speed": 150,
       "radius": 11,
       "regenDelay": 3,
-      "regenPerSecond": 3
+      "regenPerSecond": 3,
+      "leadership": 3,
+      "leadershipMax": 7
     },
     "general": {
       "name": "大将",
@@ -119,15 +121,19 @@
     "formation": {
       "rowOf": { "sword": "front", "spear": "front", "cavalry": "middle", "archer": "back" },
       "slots": {
-        "front": [[0, -60], [-110, -40], [110, -40]],
-        "middle": [[-100, 30], [100, 30]],
-        "back": [[0, 90], [-110, 120], [110, 120]]
+        "front": [[0, -60], [-110, -40], [110, -40], [-220, -20], [220, -20], [-55, -130], [55, -130]],
+        "middle": [[-100, 30], [100, 30], [-210, 50], [210, 50], [-320, 70], [320, 70], [-430, 90]],
+        "back": [[0, 90], [-110, 120], [110, 120], [0, 170], [-110, 200], [110, 200], [0, 250]]
       }
     },
     "slotSpeedMultiplier": 1.15,
     "catchUpMaxMultiplier": 1.8,
     "catchUpDistance": 120,
     "returnSpeedMultiplier": 0.8,
-    "retreatSpeedMultiplier": 0.6
+    "retreatSpeedMultiplier": 0.6,
+    "recruitRadius": 70,
+    "whistleSeconds": 2,
+    "archerLineMargin": 12,
+    "headingTurnRate": 5
   }
 }

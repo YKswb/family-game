@@ -41,6 +41,8 @@ function engagementOf(w: World, u: Unit): Engagement {
   if (sq.mode === 'follow') {
     let engage = w.order === 'charge' ? ai.chargeSightRadius : ai.gatherEngageRadius;
     if (u.isRanged) engage = Math.max(engage, u.range);
+    // 集合の笛が鳴っているあいだは戦わずに戻る
+    if (w.recallTime > 0) engage = 0;
     // 隊列の自分の位置から離れすぎないよう、ひもでつなぐ
     return { engage, leash: engage + ai.allyLeashExtra, anchorX: u.slotX, anchorY: u.slotY };
   }
@@ -79,6 +81,12 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
   u.ky *= decay;
   u.cooldown -= dt;
   u.moving = false;
+
+  // 旗の部隊はジャンが来るまでその場で待つ
+  if (sq.mode === 'neutral') {
+    moveTo(u, u.slotX, u.slotY, u.speed * ai.returnSpeedMultiplier, dt);
+    return;
+  }
 
   const e = engagementOf(w, u);
   const fromAnchor = dist(u.x, u.y, e.anchorX, e.anchorY);
@@ -123,6 +131,9 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
       } else if (d > u.range) {
         if (sq.mode === 'follow' && w.order === 'gather') moveTo(u, u.slotX, u.slotY, u.speed, dt);
         else moveTo(u, t.x, t.y, u.speed, dt);
+      } else if (sq.mode === 'follow') {
+        // 射程内なら、足を止めずに隊列について行きながら射つ
+        moveTo(u, u.slotX, u.slotY, u.speed, dt);
       }
       if (d >= u.keep && d <= u.range + 10 && u.cooldown <= 0) {
         u.cooldown = u.interval;

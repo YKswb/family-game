@@ -8,6 +8,8 @@ import type { Unit } from './Unit';
 const COLOR = {
   ally: 0x4f8dff,
   enemy: 0xff5a4f,
+  /** 旗を立てて待っている部隊（まだ仲間ではない） */
+  neutral: 0xa8b0b8,
   hero: 0xffd04a,
   flash: 0xffffff,
   skin: 0xffd9b0,
@@ -27,7 +29,8 @@ const COLOR = {
 export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit): void {
   const isHero = u.kind === 'hero';
   const flash = u.hitFlash > 0;
-  const body = flash ? COLOR.flash : isHero ? COLOR.hero : u.side === 'ally' ? COLOR.ally : COLOR.enemy;
+  const team = u.squad?.mode === 'neutral' ? COLOR.neutral : u.side === 'ally' ? COLOR.ally : COLOR.enemy;
+  const body = flash ? COLOR.flash : isHero ? COLOR.hero : team;
   const bob = u.moving ? Math.abs(Math.sin(u.bob)) * 2 : 0;
   const r = u.radius;
 
@@ -109,6 +112,17 @@ export function drawArrow(g: Phaser.GameObjects.Graphics, a: Arrow): void {
   const l = Math.hypot(a.vx, a.vy) || 1;
   g.lineStyle(2, a.side === 'ally' ? 0xe8f0ff : 0xffd0c8, 1);
   g.lineBetween(a.x, a.y, a.x - (a.vx / l) * 12, a.y - (a.vy / l) * 12);
+}
+
+/** 仲間にできる部隊の旗。(x, y) が竿の根元 */
+export function drawFlag(g: Phaser.GameObjects.Graphics, x: number, y: number, time: number): void {
+  const b = Math.sin(time * 4) * 4;
+  g.lineStyle(3, 0x5a3a22, 1);
+  g.lineBetween(x, y, x, y - 60 + b);
+  g.fillStyle(0x4f8dff, 1);
+  g.fillTriangle(x, y - 60 + b, x + 30, y - 50 + b, x, y - 40 + b);
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(x + 10, y - 50 + b, 3);
 }
 
 export function drawTree(g: Phaser.GameObjects.Graphics, x: number, y: number, s: number): void {

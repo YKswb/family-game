@@ -34,6 +34,8 @@ export class Unit {
   moveTime = 0;
   stillTime = 0;
   chargeReady = false;
+  /** フレームの初めの、ジャンの進行方向に沿った前後の位置（弓兵の後方ルール用） */
+  lineF = 0;
   /** 先制の一撃をすでに入れた相手 */
   firstStruckId = -1;
 

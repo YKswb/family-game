@@ -13,5 +13,21 @@
   "survivors": "のこった みかた {n}人",
   "retry": "もういちど",
   "practiceTitle": "れんしゅう",
-  "time": "じかん"
+  "time": "じかん",
+  "toSquadPractice": "ぶたいを ためす",
+  "toDuelPractice": "あいしょうを ためす",
+  "squadPracticeHint": "はたの ぶたいに さわって なかまを あつめよう",
+  "flag": "さわると なかまに",
+  "waiting": "たいき",
+  "recruited": "{name}が なかまに なった！",
+  "recruitedWaiting": "{name}は ここで まっている",
+  "orderCharge": "とつげき",
+  "orderGather": "しゅうごう",
+  "orderLabel": "めいれい：{order}",
+  "toCharge": "とつげき！",
+  "toGather": "しゅうごう！",
+  "whistle": "集合の笛",
+  "whistleCall": "みんな あつまれ！",
+  "squadCount": "ぶたい {n}/{max}",
+  "noSquads": "なかま なし"
 }
