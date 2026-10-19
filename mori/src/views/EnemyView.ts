@@ -1,107 +1,130 @@
 import type Phaser from 'phaser';
+import type { EnemyKind, EnemyStats } from '../data/gameData';
 import type { Enemy } from '../entities/Enemy';
 import { hex } from '../ui/Display';
-import { ell, rr } from './shapes';
+import { INK, ell, oCircle, oEll, oPoly, oRect, oTri, rr, shade, tint } from './shapes';
 
 type G = Phaser.GameObjects.Graphics;
 
-function hpBar(g: G, x: number, y: number, w: number, f: number): void {
-  g.fillStyle(0x000000, 0.45);
+/** 空を飛ぶ敵が浮いている高さ（揺れの分を含めない） */
+export const FLY_LIFT = 24;
+/** 羽ばたきの絵の枚数 */
+export const WING_FRAMES = 3;
+
+/** 敵の上の HP */
+export function drawEnemyHp(g: G, e: Enemy, lift: number): void {
+  if (e.hp >= e.maxHp) return;
+  const r = e.r;
+  const w = e.fly ? 28 : Math.max(28, r * 2);
+  const x = e.x;
+  const y = e.fly ? e.y - lift - r * 2 - 12 : e.y - r * 2.2 - 14;
+  const f = Math.max(0, e.hp / e.maxHp);
+  g.fillStyle(INK, 0.8);
+  rr(g, x - w / 2 - 1.5, y - 1.5, w + 3, 9, 4.5);
+  g.fillStyle(0x3a2a2a, 1);
   rr(g, x - w / 2, y, w, 6, 3);
   g.fillStyle(0xff5a4f, 1);
-  rr(g, x - w / 2, y, Math.max(3, w * Math.max(0, f)), 6, 3);
+  rr(g, x - w / 2, y, Math.max(3, w * f), 6, 3);
 }
 
-/** 空を飛ぶ敵（こうもり）。体が浮いていて、地面に影を落とす */
-function drawFlyer(g: G, e: Enemy): void {
-  const r = e.r;
-  const lift = 24 + Math.sin(e.bob * 0.5) * 3;
-  const fl = Math.sin(e.bob);
-  g.fillStyle(0x000000, 0.15);
-  ell(g, e.x, e.y + 2, r * 0.9, r * 0.3);
-  g.save();
-  g.translateCanvas(e.x, e.y - lift);
-  g.scaleCanvas(e.face, 1);
-  g.fillStyle(e.hitF > 0 ? 0xffffff : 0x3d2a63, 1);
+/** 目（白目と黒目とハイライト）。angry なら眉を付ける */
+function eyes(g: G, r: number, angry: boolean, white = 0xffffff): void {
+  g.fillStyle(INK, 1);
+  ell(g, r * 0.15, -r * 1.05, r * 0.21 + 1.2, r * 0.25 + 1.2);
+  ell(g, r * 0.62, -r * 1.05, r * 0.18 + 1.2, r * 0.23 + 1.2);
+  g.fillStyle(white, 1);
+  ell(g, r * 0.15, -r * 1.05, r * 0.21, r * 0.25);
+  ell(g, r * 0.62, -r * 1.05, r * 0.18, r * 0.23);
+  g.fillStyle(0x24162e, 1);
+  g.fillCircle(r * 0.22, -r * 1.0, r * 0.1);
+  g.fillCircle(r * 0.67, -r * 1.0, r * 0.09);
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(r * 0.19, -r * 1.06, r * 0.035 + 0.6);
+  g.fillCircle(r * 0.64, -r * 1.06, r * 0.03 + 0.6);
+  if (angry) {
+    g.lineStyle(Math.max(2, r * 0.09), 0x24162e, 1);
+    g.lineBetween(-r * 0.05, -r * 1.42, r * 0.35, -r * 1.28);
+    g.lineBetween(r * 0.45, -r * 1.28, r * 0.8, -r * 1.4);
+  }
+}
+
+/** 空を飛ぶ敵（こうもり）。原点は体の真下（浮いている分は含めない）。wing は羽ばたき -1〜1 */
+function drawFlyerBody(g: G, stats: EnemyStats, wing: number): void {
+  const r = stats.r;
   for (const s of [-1, 1]) {
-    g.fillPoints(
+    oPoly(
+      g,
       [
         { x: s * r * 0.4, y: -r },
-        { x: s * r * 2, y: -r * 1.4 - fl * r * 0.6 },
+        { x: s * r * 2, y: -r * 1.4 - wing * r * 0.6 },
         { x: s * r * 1.5, y: -r * 0.7 },
         { x: s * r * 1.1, y: -r * 0.75 },
       ],
-      true,
+      0x3d2a63,
     );
   }
-  g.fillStyle(e.hitF > 0 ? 0xffffff : hex(e.stats.color), 1);
-  g.fillCircle(0, -r, r);
-  g.fillStyle(0xffe066, 1);
-  g.fillCircle(r * 0.15, -r * 1.1, r * 0.2);
-  g.fillCircle(r * 0.6, -r * 1.1, r * 0.18);
-  g.fillStyle(0x24162e, 1);
-  g.fillCircle(r * 0.2, -r * 1.08, r * 0.08);
-  g.fillCircle(r * 0.64, -r * 1.08, r * 0.07);
-  if (e.slow > 0) {
-    g.fillStyle(0x8cdcff, 0.4);
-    g.fillCircle(0, -r, r * 1.15);
-  }
-  g.restore();
-  if (e.hp < e.maxHp) hpBar(g, e.x, e.y - lift - r * 2 - 12, 28, e.hp / e.maxHp);
+  const body = hex(stats.color);
+  oCircle(g, 0, -r, r, body);
+  g.fillStyle(shade(body, 0.75), 1);
+  g.beginPath();
+  g.arc(0, -r, r, 0.15, Math.PI - 0.15);
+  g.fillPath();
+  g.fillStyle(tint(body, 0.35), 1);
+  g.fillCircle(-r * 0.35, -r * 1.35, r * 0.28);
+  eyes(g, r, false, 0xffe066);
 }
 
-/** 敵1体（今の版と同じ形） */
-export function drawEnemy(g: G, e: Enemy): void {
-  if (e.fly) {
-    drawFlyer(g, e);
+/**
+ * 敵の体（右向き、つぶれも点滅もない絵）。原点は足元。画像にして使い回し、
+ * 向き・弾み・点滅・氷は画像の反転・拡大・色で表す。frame は空の敵の羽ばたきの番号
+ */
+export function drawEnemyBody(g: G, kind: EnemyKind, stats: EnemyStats, frame = 0): void {
+  const r = stats.r;
+  if (stats.fly) {
+    drawFlyerBody(g, stats, Math.sin((frame / WING_FRAMES) * Math.PI * 2));
     return;
   }
-  const r = e.r;
-  const k = e.kind;
-  const sq = 1 + Math.sin(e.bob) * (k === 'wolf' ? 0.12 : 0.07);
-  const body = e.hitF > 0 ? 0xffffff : hex(e.stats.color);
-  g.save();
-  g.translateCanvas(e.x, e.y);
-  g.fillStyle(0x000000, 0.2);
-  ell(g, 0, 2, r * 1.05, r * 0.35);
-  g.scaleCanvas(e.face, 1);
-  if (k === 'goblin') {
-    g.fillStyle(0xf3e6c8, 1);
-    g.fillTriangle(-r * 0.55, -r * 1.6, -r * 0.35, -r * 2.3, -r * 0.1, -r * 1.75);
-    g.fillTriangle(r * 0.15, -r * 1.75, r * 0.45, -r * 2.3, r * 0.65, -r * 1.6);
+  const body = hex(stats.color);
+  if (kind === 'goblin') {
+    oTri(g, -r * 0.55, -r * 1.6, -r * 0.35, -r * 2.3, -r * 0.1, -r * 1.75, 0xf3e6c8);
+    oTri(g, r * 0.15, -r * 1.75, r * 0.45, -r * 2.3, r * 0.65, -r * 1.6, 0xf3e6c8);
   }
-  if (k === 'wolf') {
-    g.fillStyle(body, 1);
-    g.fillTriangle(-r * 0.5, -r * 1.5, -r * 0.3, -r * 2.3, 0, -r * 1.6);
-    g.fillTriangle(r * 0.2, -r * 1.6, r * 0.5, -r * 2.3, r * 0.75, -r * 1.45);
-    // しっぽ
-    g.fillPoints(
+  if (kind === 'wolf') {
+    oTri(g, -r * 0.5, -r * 1.5, -r * 0.3, -r * 2.3, 0, -r * 1.6, body);
+    oTri(g, r * 0.2, -r * 1.6, r * 0.5, -r * 2.3, r * 0.75, -r * 1.45, body);
+    oPoly(
+      g,
       [
         { x: -r * 0.9, y: -r * 0.6 },
         { x: -r * 1.6, y: -r * 1.05 },
         { x: -r * 1.5, y: -r * 0.3 },
         { x: -r * 0.9, y: -r * 0.4 },
       ],
-      true,
+      body,
     );
   }
-  if (k === 'maou') {
-    g.fillStyle(0x2a1a3a, 1);
-    g.fillTriangle(-r * 0.7, -r * 1.5, -r * 1.0, -r * 2.5, -r * 0.3, -r * 1.75);
-    g.fillTriangle(r * 0.3, -r * 1.75, r * 1.0, -r * 2.5, r * 0.7, -r * 1.5);
+  if (kind === 'maou') {
+    oTri(g, -r * 0.7, -r * 1.5, -r * 1.0, -r * 2.5, -r * 0.3, -r * 1.75, 0x2a1a3a);
+    oTri(g, r * 0.3, -r * 1.75, r * 1.0, -r * 2.5, r * 0.7, -r * 1.5, 0x2a1a3a);
   }
-  g.fillStyle(body, 1);
-  g.fillEllipse(0, -r * sq, r * (2 - sq) * 2, r * sq * 2);
-  g.fillStyle(0xffffff, 0.35);
-  ell(g, -r * 0.4, -r * 1.4 * sq, r * 0.26, r * 0.15);
-  if (k === 'splitter') {
+  // 体：輪郭 → 本体 → 下の影 → 左上のつや
+  oEll(g, 0, -r, r, r, body);
+  g.fillStyle(shade(body, 0.78), 1);
+  g.beginPath();
+  g.arc(0, -r, r, 0.2, Math.PI - 0.2);
+  g.fillPath();
+  g.fillStyle(tint(body, 0.4), 1);
+  ell(g, -r * 0.4, -r * 1.4, r * 0.26, r * 0.15);
+  g.fillStyle(0xffffff, 0.8);
+  g.fillCircle(-r * 0.5, -r * 1.45, r * 0.07 + 0.5);
+  if (kind === 'splitter') {
     g.fillStyle(0xffffff, 0.3);
     g.fillCircle(-r * 0.3, -r * 0.6, r * 0.25);
     g.fillCircle(r * 0.1, -r * 0.45, r * 0.18);
   }
-  if (e.stats.boss) {
-    g.fillStyle(0xffc928, 1);
-    g.fillPoints(
+  if (stats.boss) {
+    oPoly(
+      g,
       [
         { x: -r * 0.5, y: -r * 1.75 },
         { x: -r * 0.55, y: -r * 2.35 },
@@ -111,38 +134,62 @@ export function drawEnemy(g: G, e: Enemy): void {
         { x: r * 0.55, y: -r * 2.35 },
         { x: r * 0.5, y: -r * 1.75 },
       ],
-      true,
+      0xffc928,
     );
+    g.fillStyle(0xff5a7a, 1);
+    g.fillCircle(0, -r * 1.95, r * 0.08 + 1);
   }
-  if (k === 'knight') {
-    g.fillStyle(e.hitF > 0 ? 0xffffff : 0x5a6578, 1);
+  if (kind === 'knight') {
+    const helm = 0x5a6578;
+    g.fillStyle(INK, 1);
+    g.beginPath();
+    g.arc(0, -r * 1.05, r * 0.98 + 2, Math.PI, 0);
+    g.fillPath();
+    g.fillStyle(helm, 1);
     g.beginPath();
     g.arc(0, -r * 1.05, r * 0.98, Math.PI, 0);
     g.fillPath();
-    g.fillStyle(0xe04a3a, 1);
-    ell(g, -r * 0.1, -r * 2.1, r * 0.18, r * 0.35);
-    g.fillStyle(0x1d2330, 1);
-    rr(g, -r * 0.1, -r * 1.2, r * 0.95, r * 0.28, r * 0.1);
+    g.fillStyle(tint(helm, 0.3), 1);
+    g.beginPath();
+    g.arc(-r * 0.25, -r * 1.3, r * 0.4, Math.PI, 0);
+    g.fillPath();
+    oEll(g, -r * 0.1, -r * 2.1, r * 0.18, r * 0.35, 0xe04a3a, 1.6);
+    oRect(g, -r * 0.1, -r * 1.2, r * 0.95, r * 0.28, r * 0.1, 0x1d2330, 1.4);
     g.fillStyle(0xffe066, 1);
     rr(g, r * 0.15, -r * 1.12, r * 0.55, r * 0.1, r * 0.05);
-  } else {
-    g.fillStyle(k === 'maou' ? 0xff3a3a : 0xffffff, 1);
-    ell(g, r * 0.15, -r * 1.05, r * 0.21, r * 0.25);
-    ell(g, r * 0.62, -r * 1.05, r * 0.18, r * 0.23);
-    g.fillStyle(0x24162e, 1);
-    g.fillCircle(r * 0.22, -r * 1.0, r * 0.1);
-    g.fillCircle(r * 0.67, -r * 1.0, r * 0.09);
-    if (k !== 'slime' && k !== 'mini' && k !== 'splitter') {
-      // 怒った眉
-      g.lineStyle(Math.max(2, r * 0.09), 0x24162e, 1);
-      g.lineBetween(-r * 0.05, -r * 1.42, r * 0.35, -r * 1.28);
-      g.lineBetween(r * 0.45, -r * 1.28, r * 0.8, -r * 1.4);
-    }
+    return;
   }
-  if (e.slow > 0) {
-    g.fillStyle(0x8cdcff, 0.38);
-    g.fillEllipse(0, -r * sq, r * 2.24, r * 2.16);
+  const smiley = kind === 'slime' || kind === 'mini' || kind === 'splitter';
+  eyes(g, r, !smiley, kind === 'maou' ? 0xff3a3a : 0xffffff);
+  if (smiley) {
+    g.lineStyle(Math.max(1.5, r * 0.07), 0x24162e, 1);
+    g.beginPath();
+    g.arc(r * 0.4, -r * 0.78, r * 0.14, 0.2, Math.PI - 0.2);
+    g.strokePath();
   }
-  g.restore();
-  if (e.hp < e.maxHp) hpBar(g, e.x, e.y - r * 2.2 - 14, Math.max(28, r * 2), e.hp / e.maxHp);
+}
+
+/** 画像の大きさと足元の位置（その敵の半径から決める） */
+export function enemyFrame(stats: EnemyStats): { w: number; h: number; ox: number; oy: number } {
+  const r = stats.r;
+  const w = Math.ceil(r * 4.4 + 12);
+  const h = Math.ceil(r * 2.7 + 12);
+  return { w, h, ox: w / 2, oy: h - 4 };
+}
+
+/** 弾み（縦の伸び縮み）。攻撃を受けた直後は少しつぶれる */
+export function enemySquash(e: Enemy): number {
+  const hit = e.hitF > 0 ? 0.12 * (e.hitF / 0.12) : 0;
+  return 1 + Math.sin(e.bob) * (e.kind === 'wolf' ? 0.12 : 0.07) - hit;
+}
+
+/** 空の敵の、いまの浮いている高さ */
+export function enemyLift(e: Enemy): number {
+  return e.fly ? FLY_LIFT + Math.sin(e.bob * 0.5) * 3 : 0;
+}
+
+/** 羽ばたきの絵の番号 */
+export function wingFrame(e: Enemy): number {
+  const t = (((e.bob / (Math.PI * 2)) % 1) + 1) % 1;
+  return Math.floor(t * WING_FRAMES) % WING_FRAMES;
 }

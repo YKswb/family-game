@@ -6,9 +6,10 @@
     "ground": "#78c35f",
     "tuft": ["#69b552", "#88cd6d"],
     "flower": ["#ffffff", "#ffd84d", "#ff9ec4"],
-    "leaf": ["#2a8338", "#3fa04a"],
+    "leaf": ["#349643", "#62bd56"],
     "clearing": "#f0d696",
-    "fog": "#12280e"
+    "fog": "#12280e",
+    "weather": { "type": "petals", "colors": ["#ffd1e0", "#ffffff", "#ffb3cb"], "count": 22, "size": 6 }
   },
   "width": 1400,
   "height": 1400,

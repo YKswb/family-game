@@ -173,14 +173,31 @@ export interface UpgradeData {
   perks: Perk[];
 }
 
+/** 画面に重ねる天気 */
+export interface WeatherData {
+  type: 'none' | 'petals' | 'leaves' | 'snow' | 'embers' | 'fireflies';
+  colors: string[];
+  /** iPad の横向きの画面に出す数 */
+  count: number;
+  size: number;
+}
+
 export interface StageTheme {
   background: string;
   ground: string;
   tuft: string[];
   flower: string[];
+  /** 葉の色と、明るいところの色 */
   leaf: string[];
   clearing: string;
   fog: string;
+  weather?: WeatherData;
+  /** 画面全体に重ねる色（夕方や夜の雰囲気） */
+  tint?: { color: string; alpha: number };
+  /** 夜：おうちの窓に明かりがともる */
+  night?: boolean;
+  /** 雪：木やとうの屋根に雪が積もる */
+  snow?: boolean;
 }
 
 export interface SpotSpec {
