@@ -52,16 +52,26 @@ export class Squad {
     return n;
   }
 
-  /** 生き残りの兵種ごとの人数。最初の兵種を先に、あとは SOLDIER_KINDS の順 */
-  composition(): { kind: SoldierKind; n: number }[] {
-    const counts = new Map<SoldierKind, number>();
+  /**
+   * 生き残りを兵種ごとのかたまりに分ける。最初の兵種を先に、あとは SOLDIER_KINDS の順。
+   * 補充で兵種が混ざった部隊は、かたまりごとにその兵種の列へ並ぶ
+   */
+  groups(): { kind: SoldierKind; units: Unit[] }[] {
+    const byKind = new Map<SoldierKind, Unit[]>();
     for (const u of this.units) {
       if (u.dead) continue;
       const k = u.kind as SoldierKind;
-      counts.set(k, (counts.get(k) ?? 0) + 1);
+      let list = byKind.get(k);
+      if (!list) byKind.set(k, (list = []));
+      list.push(u);
     }
     const order = [this.kind, ...SOLDIER_KINDS.filter((k) => k !== this.kind)];
-    return order.filter((k) => counts.has(k)).map((kind) => ({ kind, n: counts.get(kind)! }));
+    return order.filter((k) => byKind.has(k)).map((kind) => ({ kind, units: byKind.get(kind)! }));
+  }
+
+  /** 生き残りの兵種ごとの人数（groups と同じ順） */
+  composition(): { kind: SoldierKind; n: number }[] {
+    return this.groups().map((g) => ({ kind: g.kind, n: g.units.length }));
   }
 
   center(): { x: number; y: number } {

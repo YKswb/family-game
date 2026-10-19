@@ -1,14 +1,15 @@
 import type { FormationRow } from '../data/unitData';
 import type { Unit } from '../entities/Unit';
 import type { World } from '../systems/World';
-import { followAnchor, layoutSquad } from './Formation';
+import { followAnchor, layoutUnits } from './Formation';
 
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /**
  * ジャンに率いられている部隊の隊列位置を決める。
- * 兵種ごとに前列・中列・後列のどこに入るかがデータで決まっていて、同じ列の中では仲間になった順に並ぶ
+ * 兵種ごとに前列・中列・後列のどこに入るかがデータで決まっていて、同じ列の中では仲間になった順に並ぶ。
+ * 補充で兵種が混ざった部隊は、兵種ごとのかたまりに分かれて、それぞれの兵種の列へ並ぶ
  */
 export function updateFollowSquads(w: World): void {
   const ai = w.data.ai;
@@ -16,13 +17,15 @@ export function updateFollowSquads(w: World): void {
   const used: Record<FormationRow, number> = { front: 0, middle: 0, back: 0 };
   const squads = w.squads.filter((s) => s.mode === 'follow' && s.aliveCount > 0).sort((a, b) => a.followIndex - b.followIndex);
   for (const sq of squads) {
-    const row = ai.formation.rowOf[sq.kind];
-    const slots = ai.formation.slots[row];
-    const offset = slots[used[row]++ % slots.length];
-    const a = followAnchor(h.x, h.y, w.headX, w.headY, offset);
     sq.dirX = w.headX;
     sq.dirY = w.headY;
-    layoutSquad(sq, a.x, a.y, w.headX, w.headY, ai.formationSpacing, ai.formationColumns);
+    for (const g of sq.groups()) {
+      const row = ai.formation.rowOf[g.kind];
+      const slots = ai.formation.slots[row];
+      const offset = slots[used[row]++ % slots.length];
+      const a = followAnchor(h.x, h.y, w.headX, w.headY, offset);
+      layoutUnits(g.units, a.x, a.y, w.headX, w.headY, ai.formationSpacing, ai.formationColumns);
+    }
   }
 }
 

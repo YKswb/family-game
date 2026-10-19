@@ -83,6 +83,51 @@ describe('仲間化', () => {
     expect(sword.alive.every((u) => u.squad === sword)).toBe(true);
   });
 
+  /** 剣・槍・waitKind 以外の兵種を率い、waitKind を待機させて、剣の部隊を2人まで減らしてから補充する */
+  function mixIntoSword(waitKind: 'cavalry' | 'archer'): World {
+    const third = waitKind === 'archer' ? 'cavalry' : 'archer';
+    const w = new World({
+      width: 3000,
+      height: 1000,
+      hero: { x: 100, y: 500 },
+      heroDir: [1, 0],
+      squads: [flag('sword', 500, 500), flag('spear', 900, 500), flag(third, 1300, 500), flag(waitKind, 1700, 500)],
+    });
+    for (const sq of w.squads) walkTo(w, sq.postX, sq.postY);
+    kill(w, 0, 8);
+    wait(w, 0.1);
+    // 右へまっすぐ進み、止まって隊列を落ち着かせる
+    // （ジャンが全速で走り続けているあいだは、足の遅い兵種は追いつく途中なので測らない）
+    w.input = { x: 1, y: 0 };
+    for (let t = 0; t < 3; t += DT) w.step(DT);
+    wait(w, 2.5);
+    return w;
+  }
+  const avgForward = (w: World, units: { x: number; y: number }[]) =>
+    units.reduce((s, u) => s + (u.x - w.hero.x) * w.headX + (u.y - w.hero.y) * w.headY, 0) / units.length;
+
+  it('補充で剣の部隊に混ざった騎馬は、剣といっしょではなく騎馬の列（ジャンの横）に並ぶ', () => {
+    const w = mixIntoSword('cavalry');
+    const sword = w.squads[0];
+    const swords = sword.alive.filter((u) => u.kind === 'sword');
+    const cavs = sword.alive.filter((u) => u.kind === 'cavalry');
+    expect(swords).toHaveLength(2);
+    expect(cavs).toHaveLength(8);
+    // 剣はジャンの前、騎馬はジャンより少し後ろの横
+    expect(avgForward(w, swords)).toBeGreaterThan(30);
+    expect(avgForward(w, cavs)).toBeLessThan(0);
+    const side = cavs.reduce((s, u) => s + Math.abs((u.y - w.hero.y) * w.headX - (u.x - w.hero.x) * w.headY), 0) / cavs.length;
+    expect(side).toBeGreaterThan(60);
+  });
+
+  it('補充で剣の部隊に混ざった弓兵は、弓兵の列（ジャンの後ろ）に並ぶ', () => {
+    const w = mixIntoSword('archer');
+    const sword = w.squads[0];
+    const archers = sword.alive.filter((u) => u.kind === 'archer');
+    expect(archers).toHaveLength(8);
+    expect(avgForward(w, archers)).toBeLessThan(-60);
+  });
+
   it('待機の兵士が余ったら、残りはその場で待機を続ける', () => {
     const w = withWaitingCavalry();
     const [sword, , , cav] = w.squads;

@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { SOLDIER_KINDS, UNIT_DATA, type SoldierKind } from '../data/unitData';
 import { drawArrow, drawFlag, drawTree, drawUnit } from '../entities/UnitView';
-import type { Squad } from '../entities/Squad';
 import type { Unit } from '../entities/Unit';
 import { ARENA, arenaConfig, practiceConfig } from '../systems/Arena';
 import { Random } from '../systems/Random';
@@ -64,7 +63,8 @@ export class BattleScene extends Phaser.Scene {
   private banner!: Phaser.GameObjects.Text;
   private bannerT = BANNER_LIFE;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private squadLabels = new Map<Squad, Phaser.GameObjects.Text>();
+  /** 部隊の名札。率いている部隊は兵種のかたまりごとに1枚（キーは "部隊id:兵種"） */
+  private labels = new Map<string, Phaser.GameObjects.Text>();
   private particles: Particle[] = [];
   private popups: Popup[] = [];
   private fxRng = new Random(99);
@@ -80,7 +80,7 @@ export class BattleScene extends Phaser.Scene {
     this.mode = data.mode ?? this.mode;
     this.allyKind = data.allyKind ?? this.allyKind;
     this.enemyKind = data.enemyKind ?? this.enemyKind;
-    this.squadLabels = new Map();
+    this.labels = new Map();
     this.particles = [];
     this.popups = [];
     this.minimap = null;
@@ -101,9 +101,6 @@ export class BattleScene extends Phaser.Scene {
     this.drawGround();
     this.unitGfx = this.toWorld(this.add.graphics());
     this.fxGfx = this.toWorld(this.add.graphics());
-    for (const sq of this.world.squads) {
-      this.squadLabels.set(sq, this.toWorld(this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5, 1).setAlign('center')));
-    }
 
     this.hud = new Hud(this);
     this.toUi(...this.hud.objects);
@@ -230,10 +227,25 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    for (const [sq, label] of this.squadLabels) {
-      const n = sq.aliveCount;
-      label.setVisible(n > 0);
-      if (!n) continue;
+    const shown = new Set<string>();
+    for (const sq of w.squads) {
+      if (sq.aliveCount === 0) continue;
+      if (sq.mode === 'follow') {
+        // 兵種のかたまりごとに、そのかたまりの上に名札を出す
+        for (const g of sq.groups()) {
+          const key = `${sq.id}:${g.kind}`;
+          const label = this.labelFor(key);
+          shown.add(key);
+          const c = centerOf(g.units);
+          label.setText(`${UNIT_DATA.kinds[g.kind].short}${g.units.length}`);
+          label.setColor('#bcd6ff');
+          label.setPosition(c.x, c.y - 40);
+        }
+        continue;
+      }
+      const key = String(sq.id);
+      const label = this.labelFor(key);
+      shown.add(key);
       const c = sq.center();
       const stats = UNIT_DATA.kinds[sq.kind];
       if (sq.mode === 'neutral') {
@@ -250,6 +262,7 @@ export class BattleScene extends Phaser.Scene {
         label.setPosition(c.x, c.y - 40);
       }
     }
+    for (const [key, label] of this.labels) label.setVisible(shown.has(key));
 
     const f = this.fxGfx;
     f.clear();
@@ -257,6 +270,15 @@ export class BattleScene extends Phaser.Scene {
       f.fillStyle(p.color, Math.max(0, 1 - p.t / p.life));
       f.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
+  }
+
+  private labelFor(key: string): Phaser.GameObjects.Text {
+    let label = this.labels.get(key);
+    if (!label) {
+      label = this.toWorld(this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5, 1).setAlign('center'));
+      this.labels.set(key, label);
+    }
+    return label;
   }
 
   private updateCamera(dt: number): void {
@@ -530,6 +552,17 @@ export class BattleScene extends Phaser.Scene {
   private toUi(...objs: Phaser.GameObjects.GameObject[]): void {
     this.cameras.main.ignore(objs);
   }
+}
+
+/** 兵士の位置の平均 */
+function centerOf(units: readonly Unit[]): { x: number; y: number } {
+  let x = 0;
+  let y = 0;
+  for (const u of units) {
+    x += u.x;
+    y += u.y;
+  }
+  return { x: x / units.length, y: y / units.length };
 }
 
 /** 選んだ組み合わせの相性を、子ども向けの短い文で返す */
