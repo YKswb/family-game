@@ -167,6 +167,7 @@ describe('ステージ1の仕組み', () => {
 
 // 自動プレイは GitHub Actions のマシンでは手元より数倍遅いので、制限時間を長めにする
 describe('ステージ1の自動プレイ', { timeout: 30000 }, () => {
+  const survivors: number[] = [];
   it.each([1, 2, 3, 4])('最後まで通せる：会話が順に起き、大将を倒してクリア（seed %i）', (seed) => {
     const w = new World(stageConfig(STAGES.stage1.stage, seed));
     const s = runStageBot(w);
@@ -174,9 +175,14 @@ describe('ステージ1の自動プレイ', { timeout: 30000 }, () => {
     expect(w.outcome).toBe('won');
     expect(s.dialogs).toEqual(['start', 'mid', 'general', 'clear']);
     expect(s.recruited).toBeGreaterThanOrEqual(4);
-    // 待機の部隊から補充できるので、大将を倒すころにも仲間が残っている
-    expect(w.countFollowing()).toBeGreaterThan(0);
+    survivors.push(w.countFollowing());
     // ボットは子どもより速いので、10分よりずっと短く終わる
     expect(s.seconds).toBeLessThan(600);
+  });
+
+  it('待機の部隊から補充できるので、大将を倒すころにも仲間が残っている（4回の平均で8人以上）', () => {
+    expect(survivors).toHaveLength(4);
+    const avg = survivors.reduce((a, b) => a + b, 0) / survivors.length;
+    expect(avg).toBeGreaterThanOrEqual(8);
   });
 });

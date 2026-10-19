@@ -60,13 +60,19 @@ describe('仲間化', () => {
   const kill = (w: World, squadIndex: number, n: number) => {
     for (const u of w.squads[squadIndex].alive.slice(0, n)) u.dead = true;
   };
+  /** 補充は触れた瞬間に起きるので、いったん離れてから待機部隊に触れ直す */
+  const retouch = (w: World, squadIndex: number) => {
+    const sq = w.squads[squadIndex];
+    walkTo(w, sq.postX - 250, sq.postY);
+    walkTo(w, sq.center().x, sq.center().y);
+  };
 
   it('兵士が減ったあとに待機の部隊に触れると、兵種を問わず減った部隊へ最初の人数まで加わる', () => {
     const w = withWaitingCavalry();
     const [sword, spear, archer, cav] = w.squads;
     kill(w, 0, 8); // 剣 2人
     kill(w, 1, 4); // 槍 6人
-    wait(w, 0.1);
+    retouch(w, 3);
     // 減っている人数が多い剣の部隊から埋める
     expect(sword.composition()).toEqual([
       { kind: 'sword', n: 2 },
@@ -95,7 +101,7 @@ describe('仲間化', () => {
     });
     for (const sq of w.squads) walkTo(w, sq.postX, sq.postY);
     kill(w, 0, 8);
-    wait(w, 0.1);
+    retouch(w, 3);
     // 右へまっすぐ進み、止まって隊列を落ち着かせる
     // （ジャンが全速で走り続けているあいだは、足の遅い兵種は追いつく途中なので測らない）
     w.input = { x: 1, y: 0 };
@@ -140,6 +146,39 @@ describe('仲間化', () => {
     expect(cav.aliveCount).toBe(10);
   });
 
+  it('補充は触れた瞬間に1回だけ。そばに立っていても、戻った兵士は待機部隊にたまり、触れ直すと補充される', () => {
+    const w = withWaitingCavalry();
+    const [sword, , , cav] = w.squads;
+    kill(w, 0, 8); // 剣 2人
+    retouch(w, 3); // 騎馬8人が剣の部隊へ。待機の騎馬は2人
+    expect(sword.aliveCount).toBe(10);
+    expect(cav.aliveCount).toBe(2);
+    kill(w, 0, 5); // 剣 5人
+    // そばに立ったまま待つと、戻った兵士は待機部隊にたまる（勝手に補充されない）
+    wait(w, UNIT_DATA.ai.waitingReviveSeconds * 2 + 0.1);
+    expect(cav.aliveCount).toBe(4);
+    expect(sword.aliveCount).toBe(5);
+    retouch(w, 3);
+    expect(sword.aliveCount).toBe(9);
+    expect(cav.aliveCount).toBe(0);
+  });
+
+  it('補充で空になった待機部隊も、離れているあいだに戻ってくる（実際のプレイと同じく、補充で兵士が移って空になる）', () => {
+    const w = withWaitingCavalry();
+    const [, spear, archer, cav] = w.squads;
+    kill(w, 1, 5);
+    kill(w, 2, 5);
+    retouch(w, 3);
+    expect(cav.aliveCount).toBe(0);
+    expect(spear.aliveCount + archer.aliveCount).toBe(20);
+    walkTo(w, 2500, 500);
+    // 歩いているあいだにも戻り始めるので、離れてからの増え方を見る
+    const before = cav.aliveCount;
+    wait(w, UNIT_DATA.ai.waitingReviveSeconds * 3);
+    expect(cav.aliveCount).toBe(before + 3);
+    expect(cav.waiting).toBe(true);
+  });
+
   it('補充で空になった待機部隊も、また戻ってくる', () => {
     const w = withWaitingCavalry();
     const cav = w.squads[3];
@@ -175,7 +214,7 @@ describe('仲間化', () => {
     const w = withWaitingCavalry();
     const [sword, , , cav] = w.squads;
     kill(w, 0, 7);
-    wait(w, 0.1);
+    retouch(w, 3);
     expect(sword.aliveCount).toBe(10);
     expect(cav.aliveCount).toBe(3);
     expect(cav.waiting).toBe(true);

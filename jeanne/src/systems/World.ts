@@ -122,6 +122,8 @@ export class World {
   readonly rng: Random;
   private nextId = 0;
   private nextFollowIndex = 0;
+  /** いまジャンが触れている旗の部隊・待機部隊（触れた瞬間を見分けるため） */
+  private readonly touching = new Set<Squad>();
 
   constructor(cfg: WorldConfig) {
     this.data = cfg.data ?? UNIT_DATA;
@@ -332,21 +334,27 @@ export class World {
     const r = this.data.ai.recruitRadius;
     for (const sq of this.squads) {
       if (sq.mode !== 'neutral' && !sq.waiting) continue;
-      if (sq.aliveCount === 0) continue;
       const c = sq.center();
-      if (dist(h.x, h.y, c.x, c.y) > r) continue;
+      const inside = dist(h.x, h.y, c.x, c.y) <= r;
+      // 補充は「触れた瞬間」に1回だけ。そばに立ち続けても、戻ってきた兵士は待機部隊にたまっていく
+      const touched = inside && !this.touching.has(sq);
+      if (inside) this.touching.add(sq);
+      else this.touching.delete(sq);
+      if (!inside || sq.aliveCount === 0) continue;
       if (this.followingSquads().length < this.leadership) {
         sq.mode = 'follow';
         sq.waiting = false;
         sq.alert = false;
         sq.followIndex = this.nextFollowIndex++;
+        this.touching.delete(sq);
         this.events.push({ type: 'recruit', squad: sq, waiting: false });
       } else if (sq.mode === 'neutral') {
-        // 上限を超えたので、旗を下ろしてその場を守る
+        // 上限を超えたので、旗を下ろしてその場を守る。触れたついでに、減っている部隊へ補充する
         sq.mode = 'hold';
         sq.waiting = true;
         this.events.push({ type: 'recruit', squad: sq, waiting: true });
-      } else {
+        this.reinforceFrom(sq);
+      } else if (touched) {
         this.reinforceFrom(sq);
       }
     }
