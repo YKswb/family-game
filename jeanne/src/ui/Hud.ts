@@ -19,6 +19,7 @@ export class Hud {
   private readonly order: Phaser.GameObjects.Text;
   private readonly squads: Phaser.GameObjects.Text;
   private readonly counts: Phaser.GameObjects.Text;
+  private readonly guards: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     this.gfx = scene.add.graphics().setDepth(800);
@@ -26,10 +27,11 @@ export class Hud {
     this.order = scene.add.text(30, 78, '', textStyle(24)).setOrigin(0, 0.5).setDepth(801);
     this.squads = scene.add.text(30, 116, '', textStyle(22)).setOrigin(0, 0.5).setDepth(801);
     this.counts = scene.add.text(30, 154, '', textStyle(20, '#e8e0cc')).setOrigin(0, 0.5).setDepth(801);
+    this.guards = scene.add.text(30, 190, '', textStyle(22, '#ffd84d')).setOrigin(0, 0.5).setDepth(801);
   }
 
   get objects(): Phaser.GameObjects.GameObject[] {
-    return [this.gfx, this.name, this.order, this.squads, this.counts];
+    return [this.gfx, this.name, this.order, this.squads, this.counts, this.guards];
   }
 
   update(w: World): void {
@@ -37,7 +39,9 @@ export class Hud {
     const g = this.gfx;
     g.clear();
     g.fillStyle(0x000000, 0.38);
-    g.fillRoundedRect(14, 12, 360, 166, 18);
+    // 大将がいるステージでは、残りの護衛の数を1行足す
+    const hasGeneral = !!w.general;
+    g.fillRoundedRect(14, 12, 360, hasGeneral ? 200 : 166, 18);
     // HPバー
     const bx = 110;
     const bw = 244;
@@ -57,5 +61,10 @@ export class Hud {
 
     const s = Math.floor(w.time);
     this.counts.setText(`${TEXT.enemyLabel} ${w.countAlive('enemy')}　${TEXT.time} ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
+    this.guards.setVisible(hasGeneral);
+    if (hasGeneral) {
+      const n = w.guardsLeft();
+      this.guards.setText(n > 0 ? fmt(TEXT.guardsLeft, { n }) : TEXT.guardsGone);
+    }
   }
 }

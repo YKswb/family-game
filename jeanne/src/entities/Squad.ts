@@ -8,6 +8,9 @@ import type { Side, Unit } from './Unit';
  */
 export type SquadMode = 'follow' | 'hold' | 'neutral';
 
+/** 部隊の兵種。大将はひとりだけの部隊として扱う */
+export type SquadKind = SoldierKind | 'general';
+
 export class Squad {
   readonly units: Unit[] = [];
   /** 持ち場（hold のとき） */
@@ -24,12 +27,22 @@ export class Squad {
   waiting = false;
   /** 補充で戻せる人数の上限（最初の人数） */
   capacity = 0;
+  /** ステージデータでの名前（イベントや大将の護衛から参照する） */
+  name = '';
+  /** 巡回・進軍のルート。持ち場がこの上を動く */
+  route: [number, number][] | null = null;
+  /** true なら巡回（くり返す）、false なら進軍（最後の地点で止まる） */
+  routeLoop = false;
+  routeIndex = 0;
+  routeSpeed = 0;
+  /** 索敵範囲（null なら units.json の値） */
+  alertRadius: number | null = null;
 
   constructor(
     readonly id: number,
     public side: Side,
-    /** 最初の兵種。隊列の列はこれで決まる（補充で他の兵種が混ざることがある） */
-    readonly kind: SoldierKind,
+    /** 最初の兵種（補充で他の兵種が混ざることがある） */
+    readonly kind: SquadKind,
     public mode: SquadMode,
     x: number,
     y: number,
@@ -56,21 +69,21 @@ export class Squad {
    * 生き残りを兵種ごとのかたまりに分ける。最初の兵種を先に、あとは SOLDIER_KINDS の順。
    * 補充で兵種が混ざった部隊は、かたまりごとにその兵種の列へ並ぶ
    */
-  groups(): { kind: SoldierKind; units: Unit[] }[] {
-    const byKind = new Map<SoldierKind, Unit[]>();
+  groups(): { kind: SquadKind; units: Unit[] }[] {
+    const byKind = new Map<SquadKind, Unit[]>();
     for (const u of this.units) {
       if (u.dead) continue;
-      const k = u.kind as SoldierKind;
+      const k = u.kind as SquadKind;
       let list = byKind.get(k);
       if (!list) byKind.set(k, (list = []));
       list.push(u);
     }
-    const order = [this.kind, ...SOLDIER_KINDS.filter((k) => k !== this.kind)];
+    const order: SquadKind[] = [this.kind, ...SOLDIER_KINDS.filter((k) => k !== this.kind)];
     return order.filter((k) => byKind.has(k)).map((kind) => ({ kind, units: byKind.get(kind)! }));
   }
 
   /** 生き残りの兵種ごとの人数（groups と同じ順） */
-  composition(): { kind: SoldierKind; n: number }[] {
+  composition(): { kind: SquadKind; n: number }[] {
     return this.groups().map((g) => ({ kind: g.kind, n: g.units.length }));
   }
 

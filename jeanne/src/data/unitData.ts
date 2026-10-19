@@ -96,6 +96,8 @@ export interface UnitData {
     archerLineMargin: number;
     /** ジャンの進行方向（隊列の向き）が1秒に回る角度（ラジアン） */
     headingTurnRate: number;
+    /** 巡回の速さ（ステージで指定がないとき） */
+    patrolSpeed: number;
   };
 }
 

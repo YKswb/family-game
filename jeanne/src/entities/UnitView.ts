@@ -11,6 +11,9 @@ const COLOR = {
   /** 旗を立てて待っている部隊（まだ仲間ではない） */
   neutral: 0xa8b0b8,
   hero: 0xffd04a,
+  /** 敵の大将 */
+  general: 0x2a2a33,
+  gold: 0xffcc1f,
   flash: 0xffffff,
   skin: 0xffd9b0,
   legs: 0x3b4a66,
@@ -26,11 +29,13 @@ const COLOR = {
   hpLow: 0xff5a4f,
 };
 
-export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit): void {
+/** guarded：大将が護衛に守られていて無敵のときに、守りの輪を描く */
+export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = false): void {
   const isHero = u.kind === 'hero';
+  const isGen = u.kind === 'general';
   const flash = u.hitFlash > 0;
   const team = u.squad?.mode === 'neutral' ? COLOR.neutral : u.side === 'ally' ? COLOR.ally : COLOR.enemy;
-  const body = flash ? COLOR.flash : isHero ? COLOR.hero : team;
+  const body = flash ? COLOR.flash : isHero ? COLOR.hero : isGen ? COLOR.general : team;
   const bob = u.moving ? Math.abs(Math.sin(u.bob)) * 2 : 0;
   const r = u.radius;
 
@@ -53,7 +58,7 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit): void {
     g.lineStyle(2, COLOR.steel, 1);
     g.lineBetween(6, -22 - bob, 18, -34 - bob - u.swing * 6);
   } else {
-    const hh = isHero ? 1.25 : 1;
+    const hh = isGen ? 1.5 : isHero ? 1.25 : 1;
     const top = -9 * hh - r * 1.5 - bob;
     const headY = top - 7;
     g.fillStyle(COLOR.legs, 1);
@@ -66,7 +71,14 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit): void {
     g.fillStyle(body, 1);
     g.fillRoundedRect(-r * 0.85, top, r * 1.7, r * 1.5, 4);
     g.fillStyle(COLOR.skin, 1);
-    g.fillCircle(0, headY, 6);
+    g.fillCircle(0, headY, isGen ? 8 : 6);
+    if (isGen) {
+      // 黒いかぶとに赤い羽根
+      g.fillStyle(0x1d1d26, 1);
+      g.fillRoundedRect(-9, headY - 10, 18, 8, 3);
+      g.fillStyle(0xd9342b, 1);
+      g.fillEllipse(0, headY - 14, 6, 14);
+    }
     if (isHero) {
       g.fillStyle(COLOR.helmet, 1);
       g.beginPath();
@@ -92,19 +104,27 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit): void {
       g.save();
       g.translateCanvas(r * 0.8, -14 - bob);
       g.rotateCanvas(u.swing > 0 ? -1.6 + (1 - u.swing) * 2.4 : -0.4);
-      g.lineStyle(isHero ? 3 : 2, COLOR.steel, 1);
+      g.lineStyle(isGen || isHero ? 3 : 2, isGen ? COLOR.gold : COLOR.steel, 1);
       g.lineBetween(0, 0, 0, -16 * hh);
       g.restore();
     }
   }
   g.restore();
 
-  if (isHero && u.hp < u.maxHp) {
-    const w = 44;
+  if (guarded) {
+    g.lineStyle(3, 0xffe066, 0.8);
+    g.strokeCircle(u.x, u.y - 22, 34);
+    g.fillStyle(0xffe066, 0.12);
+    g.fillCircle(u.x, u.y - 22, 34);
+  }
+
+  if ((isHero || isGen) && u.hp < u.maxHp) {
+    const w = isGen ? 60 : 44;
+    const y = u.y - (isGen ? 78 : 62);
     g.fillStyle(COLOR.hpBack, 0.45);
-    g.fillRoundedRect(u.x - w / 2, u.y - 62, w, 6, 3);
-    g.fillStyle(u.hp / u.maxHp > 0.3 ? COLOR.hpHero : COLOR.hpLow, 1);
-    g.fillRoundedRect(u.x - w / 2, u.y - 62, Math.max(3, (w * u.hp) / u.maxHp), 6, 3);
+    g.fillRoundedRect(u.x - w / 2, y, w, 6, 3);
+    g.fillStyle(isGen ? COLOR.hpLow : u.hp / u.maxHp > 0.3 ? COLOR.hpHero : COLOR.hpLow, 1);
+    g.fillRoundedRect(u.x - w / 2, y, Math.max(3, (w * u.hp) / u.maxHp), 6, 3);
   }
 }
 

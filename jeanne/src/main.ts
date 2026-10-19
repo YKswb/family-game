@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/Battle';
 import { BootScene } from './scenes/Boot';
+import { TitleScene } from './scenes/Title';
 import { DPR, VIEW_H, VIEW_W } from './ui/Display';
 
 // 基準解像度は iPad Air 第4世代の横向き（約1.44:1）。ほかの比率は余白で吸収する。
@@ -16,5 +17,5 @@ new Phaser.Game({
     height: VIEW_H * DPR,
   },
   input: { activePointers: 3 },
-  scene: [BootScene, BattleScene],
+  scene: [BootScene, TitleScene, BattleScene],
 });

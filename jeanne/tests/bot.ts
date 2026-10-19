@@ -150,6 +150,99 @@ export function runPracticeBot(w: World, maxSeconds = 300, dt = 1 / 60, onStep?:
   return { seconds: w.time, broken, recruited, whistles, maxArcherAheadSteady };
 }
 
+export interface StageStats {
+  seconds: number;
+  broken: string | null;
+  recruited: number;
+  whistles: number;
+  /** 起きた会話の順番 */
+  dialogs: string[];
+  /** 最後に、率いている兵士のうちジャンの近く（500以内）にいる割合 */
+  nearHeroRatio: number;
+}
+
+/**
+ * ステージを通すボット。旗の部隊を集め、護衛から順に敵の部隊を倒し、最後に大将を倒す。
+ * 川は橋を経由して渡る（ジャンの行き先にも地形の経路を使う）
+ */
+export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats {
+  const startX = w.hero.x;
+  const startY = w.hero.y;
+  let retreating = false;
+  let whistles = 0;
+  let broken: string | null = null;
+  const dialogs: string[] = [];
+
+  while (w.outcome === 'playing' && w.time < maxSeconds) {
+    const h = w.hero;
+    if (!retreating && h.hp < h.maxHp * 0.35) {
+      retreating = true;
+      w.whistle();
+      whistles++;
+    }
+    if (retreating && h.hp > h.maxHp * 0.8) retreating = false;
+
+    let tx = startX;
+    let ty = startY;
+    let stopAt = 20;
+    const neutral = nearestSquad(w, (s) => s.mode === 'neutral');
+    const guarded = w.isGeneralGuarded();
+    const foeSquad = nearestSquad(w, (s) => s.side === 'enemy' && (!guarded || s !== w.generalSquad));
+    // 旗の部隊と敵の部隊のうち、近い方から順に進む（敵の中を突っ切って旗を取りに行かない）
+    const distTo = (s: typeof neutral) => (s ? Math.hypot(s.center().x - h.x, s.center().y - h.y) : Infinity);
+    const recruitFirst = neutral !== null && distTo(neutral) <= distTo(foeSquad);
+    if (retreating) {
+      // 8方向のうち、敵からいちばん遠くなる場所へ下がって回復を待つ
+      // （スタート地点まで戻ると時間がかかりすぎ、敵から真っすぐ離れると隅に追い詰められる）
+      const foes = w.units.filter((u) => !u.dead && u.side === 'enemy');
+      let bestScore = -Infinity;
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const cx = Math.min(w.width - 80, Math.max(80, h.x + Math.cos(a) * 350));
+        const cy = Math.min(w.height - 80, Math.max(80, h.y + Math.sin(a) * 350));
+        if (w.terrain.isBlocked(cx, cy, 20)) continue;
+        let minD = Infinity;
+        for (const f of foes) minD = Math.min(minD, Math.hypot(f.x - cx, f.y - cy));
+        if (minD > bestScore) {
+          bestScore = minD;
+          tx = cx;
+          ty = cy;
+        }
+      }
+    } else if (recruitFirst && neutral) {
+      ({ x: tx, y: ty } = neutral.center());
+    } else if (foeSquad) {
+      const near = w.nearestFoe('ally', h.x, h.y, 150);
+      const target = near && !(guarded && near === w.general) ? near : null;
+      const c = foeSquad.center();
+      tx = target?.x ?? c.x;
+      ty = target?.y ?? c.y;
+      stopAt = target ? h.radius + target.radius : 40;
+      w.setOrder(Math.hypot(c.x - h.x, c.y - h.y) < 500 ? 'charge' : 'gather');
+    }
+    const p = w.terrain.waypoint(h.x, h.y, tx, ty);
+    const dx = p.x - h.x;
+    const dy = p.y - h.y;
+    const d = Math.hypot(dx, dy);
+    const stop = p.x === tx && p.y === ty ? stopAt : 4;
+    w.input = d > stop ? { x: dx / d, y: dy / d } : { x: 0, y: 0 };
+
+    w.step(dt);
+    for (const e of w.events) if (e.type === 'dialog') dialogs.push(e.key);
+
+    for (const u of w.units) {
+      if (u.dead) continue;
+      if (!Number.isFinite(u.x) || !Number.isFinite(u.y) || !Number.isFinite(u.hp)) broken ??= `NaN: unit ${u.id}`;
+      if (u.x < 0 || u.y < 0 || u.x > w.width || u.y > w.height) broken ??= `場外: unit ${u.id}`;
+      if (w.terrain.isBlocked(u.x, u.y)) broken ??= `川の中: unit ${u.id} (${u.x | 0}, ${u.y | 0})`;
+    }
+  }
+  const following = w.followingSquads().flatMap((s) => s.alive);
+  const near = following.filter((u) => Math.hypot(u.x - w.hero.x, u.y - w.hero.y) < 500).length;
+  const recruited = w.squads.filter((s) => s.side === 'ally' && (s.mode === 'follow' || s.waiting)).length;
+  return { seconds: w.time, broken, recruited, whistles, dialogs, nearHeroRatio: following.length ? near / following.length : 1 };
+}
+
 function nearestSquad(w: World, pred: (s: World['squads'][number]) => boolean): World['squads'][number] | null {
   let best: World['squads'][number] | null = null;
   let bd = Infinity;

@@ -8,6 +8,9 @@ import { Unit, type Side } from '../entities/Unit';
 import { computeDamage } from './Combat';
 import { Random } from './Random';
 import { SpatialGrid } from './Spatial';
+import { EventRunner } from './Events';
+import { Terrain, type Rect } from './Terrain';
+import type { StageEvent, StageGeneral } from '../data/stageData';
 
 export interface SquadSpec {
   side: Side;
@@ -18,6 +21,17 @@ export interface SquadSpec {
   mode: SquadMode;
   /** 隊列の前方向。省略時は上向き */
   dir?: [number, number];
+  /** ステージデータでの名前 */
+  id?: string;
+  /** 巡回ルート（くり返す） */
+  patrol?: [number, number][];
+  /** 進軍ルート（最後の地点で止まって守る） */
+  route?: [number, number][];
+  /** 巡回・進軍の速さ */
+  speed?: number;
+  alertRadius?: number;
+  /** 最初から警戒している */
+  alert?: boolean;
 }
 
 export interface WorldConfig {
@@ -29,6 +43,13 @@ export interface WorldConfig {
   squads: SquadSpec[];
   /** 通れない円（森など） */
   obstacles?: { x: number; y: number; r: number }[];
+  /** 通れない四角（川・壁）と、その上を通れる四角（橋・門） */
+  blockers?: Rect[];
+  passages?: Rect[];
+  /** 敵の大将（護衛が全滅するまで無敵） */
+  general?: StageGeneral;
+  /** ステージのイベント。あるときはイベントの「勝利」でだけクリアになる */
+  events?: StageEvent[];
   seed?: number;
   data?: UnitData;
 }
@@ -45,7 +66,9 @@ export type WorldEvent =
   | { type: 'recruit'; squad: Squad; waiting: boolean }
   | { type: 'reinforce'; from: Squad; count: number }
   | { type: 'order'; order: Order }
-  | { type: 'whistle' };
+  | { type: 'whistle' }
+  | { type: 'dialog'; key: string }
+  | { type: 'guarded'; x: number; y: number };
 
 export interface Arrow {
   x: number;
@@ -68,7 +91,15 @@ export class World {
   readonly units: Unit[] = [];
   readonly squads: Squad[] = [];
   readonly obstacles: { x: number; y: number; r: number }[];
+  readonly terrain: Terrain;
   readonly hero: Hero;
+  /** 敵の大将と、大将だけの部隊 */
+  general: Unit | null = null;
+  generalSquad: Squad | null = null;
+  private guardIds: string[] = [];
+  private readonly script: EventRunner | null;
+  /** たおした敵の数 */
+  kills = 0;
   arrows: Arrow[] = [];
   /** このフレームで起きたこと（描画側が効果を出すのに使う） */
   readonly events: WorldEvent[] = [];
@@ -96,6 +127,8 @@ export class World {
     this.width = cfg.width;
     this.height = cfg.height;
     this.obstacles = cfg.obstacles ?? [];
+    this.terrain = new Terrain(cfg.blockers, cfg.passages);
+    this.script = cfg.events ? new EventRunner(cfg.events) : null;
     this.rng = new Random(cfg.seed ?? 1);
     this.grid = new SpatialGrid<Unit>(cfg.width, cfg.height, this.data.ai.gridCell);
     this.hero = new Hero(this.nextId++, this.data.kinds.hero, cfg.hero.x, cfg.hero.y);
@@ -103,6 +136,7 @@ export class World {
     this.units.push(this.hero);
     if (cfg.heroDir) [this.headX, this.headY] = cfg.heroDir;
     for (const s of cfg.squads) this.addSquad(s);
+    if (cfg.general) this.addGeneral(cfg.general);
     updateFollowSquads(this);
     for (const sq of this.squads) {
       if (sq.mode !== 'follow') continue;
@@ -117,6 +151,14 @@ export class World {
     const [dx, dy] = spec.dir ?? [0, -1];
     const sq = new Squad(this.squads.length, spec.side, spec.kind, spec.mode, spec.x, spec.y, dx, dy);
     sq.capacity = spec.count;
+    sq.name = spec.id ?? `squad${sq.id}`;
+    if (spec.patrol || spec.route) {
+      sq.route = spec.patrol ?? spec.route ?? null;
+      sq.routeLoop = !!spec.patrol;
+      sq.routeSpeed = spec.speed ?? this.data.ai.patrolSpeed;
+    }
+    sq.alertRadius = spec.alertRadius ?? null;
+    sq.alert = !!spec.alert;
     const stats = this.data.kinds[spec.kind];
     for (let i = 0; i < spec.count; i++) {
       const u = new Unit(this.nextId++, spec.kind, spec.side, stats, spec.x, spec.y, sq, this.rng.next());
@@ -142,7 +184,7 @@ export class World {
     this.recallTime = Math.max(0, this.recallTime - dt);
     this.updateRecruit();
     updateFollowSquads(this);
-    for (const sq of this.squads) if (sq.mode === 'hold') updateHoldSquad(this, sq);
+    for (const sq of this.squads) if (sq.mode === 'hold') updateHoldSquad(this, sq, dt);
     this.markArcherLine();
     for (const u of this.units) {
       if (!u.dead && u.squad) updateSoldier(this, u, dt);
@@ -150,6 +192,7 @@ export class World {
     this.separate();
     this.enforceArcherLine();
     this.updateArrows(dt);
+    this.script?.update(this);
     this.checkOutcome();
   }
 
@@ -217,6 +260,44 @@ export class World {
   /** 狙う相手を選ぶときの距離（体の大きさを引き、ジャンは少し遠い扱い） */
   targetDistance(x: number, y: number, o: Unit): number {
     return dist(x, y, o.x, o.y) - o.radius + (o.kind === 'hero' ? this.data.ai.heroTargetPenalty : 0);
+  }
+
+  // ---- ステージ ----
+
+  /** 大将を、大将ひとりだけの「持ち場を守る部隊」として置く */
+  private addGeneral(g: StageGeneral): void {
+    const [dx, dy] = g.dir ?? [0, 1];
+    const sq = new Squad(this.squads.length, 'enemy', 'general', 'hold', g.x, g.y, dx, dy);
+    sq.name = g.id;
+    sq.capacity = 1;
+    const stats = { ...this.data.kinds.general, hp: g.hp, attack: g.attack };
+    const u = new Unit(this.nextId++, 'general', 'enemy', stats, g.x, g.y, sq, this.rng.next());
+    sq.units.push(u);
+    this.units.push(u);
+    this.squads.push(sq);
+    this.general = u;
+    this.generalSquad = sq;
+    this.guardIds = [...g.guards];
+  }
+
+  squadById(id: string): Squad | null {
+    return this.squads.find((s) => s.name === id) ?? null;
+  }
+
+  /** 生き残りのいる護衛の部隊の数 */
+  guardsLeft(): number {
+    let n = 0;
+    for (const id of this.guardIds) if ((this.squadById(id)?.aliveCount ?? 0) > 0) n++;
+    return n;
+  }
+
+  isGeneralGuarded(): boolean {
+    return this.guardsLeft() > 0;
+  }
+
+  /** イベントの「勝利」 */
+  win(): void {
+    if (this.outcome === 'playing') this.outcome = 'won';
   }
 
   // ---- 部隊の運用 ----
@@ -345,6 +426,12 @@ export class World {
   /** attacker の一撃（近接・矢の両方）を target に当てる */
   strike(attacker: Unit, target: Unit): void {
     if (target.dead) return;
+    // 大将は護衛が残っているあいだ無敵
+    if (target === this.general && this.isGeneralGuarded()) {
+      target.hitFlash = 0.05;
+      this.events.push({ type: 'guarded', x: target.x, y: target.y });
+      return;
+    }
     const charging = attacker.chargeReady;
     const r = computeDamage(this.data, attacker.kind, target.kind, { attack: attacker.attack, charging });
     attacker.chargeReady = false;
@@ -385,6 +472,7 @@ export class World {
     u.dead = true;
     u.hp = 0;
     this.setTarget(u, null);
+    if (u.side === 'enemy') this.kills++;
     this.events.push({ type: 'death', x: u.x, y: u.y, side: u.side, kind: u.kind });
     if (u.squad && u.squad.aliveCount === 0) this.events.push({ type: 'squadWiped', squad: u.squad });
   }
@@ -473,6 +561,7 @@ export class World {
           u.y = o.y + (dy / d) * m;
         }
       }
+      this.terrain.pushOut(u);
       u.x = Math.min(this.width - u.radius, Math.max(u.radius, u.x));
       u.y = Math.min(this.height - u.radius, Math.max(u.radius, u.y));
     }
@@ -507,6 +596,6 @@ export class World {
   private checkOutcome(): void {
     if (this.outcome !== 'playing') return;
     if (this.hero.dead) this.outcome = 'lost';
-    else if (this.countAlive('enemy') === 0) this.outcome = 'won';
+    else if (!this.script && this.countAlive('enemy') === 0) this.outcome = 'won';
   }
 }

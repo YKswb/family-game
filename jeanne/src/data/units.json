@@ -134,6 +134,7 @@
     "recruitRadius": 70,
     "whistleSeconds": 2,
     "archerLineMargin": 12,
-    "headingTurnRate": 5
+    "headingTurnRate": 5,
+    "patrolSpeed": 50
   }
 }

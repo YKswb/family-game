@@ -1,4 +1,4 @@
-import type { FormationRow } from '../data/unitData';
+import type { FormationRow, SoldierKind } from '../data/unitData';
 import type { Unit } from '../entities/Unit';
 import type { World } from '../systems/World';
 import { followAnchor, layoutUnits } from './Formation';
@@ -20,7 +20,7 @@ export function updateFollowSquads(w: World): void {
     sq.dirX = w.headX;
     sq.dirY = w.headY;
     for (const g of sq.groups()) {
-      const row = ai.formation.rowOf[g.kind];
+      const row = ai.formation.rowOf[g.kind as SoldierKind];
       const slots = ai.formation.slots[row];
       const offset = slots[used[row]++ % slots.length];
       const a = followAnchor(h.x, h.y, w.headX, w.headY, offset);
@@ -67,6 +67,13 @@ function moveTo(u: Unit, tx: number, ty: number, speed: number, dt: number, stop
   u.y += (dy / d) * s * dt;
   u.moving = true;
   if (Math.abs(dx) > 2) u.face = dx > 0 ? 1 : -1;
+}
+
+/** 川などをまたぐときは橋を経由して進む */
+function navMove(w: World, u: Unit, tx: number, ty: number, speed: number, dt: number, stopAt = 2): void {
+  const p = w.terrain.waypoint(u.x, u.y, tx, ty);
+  if (p.x === tx && p.y === ty) moveTo(u, tx, ty, speed, dt, stopAt);
+  else moveTo(u, p.x, p.y, speed, dt);
 }
 
 /** 兵士1人の1フレーム分：目標選び、移動、攻撃 */
@@ -132,11 +139,11 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
         const l = d || 1;
         moveTo(u, u.x + ((u.x - t.x) / l) * 60, u.y + ((u.y - t.y) / l) * 60, u.speed * ai.retreatSpeedMultiplier, dt);
       } else if (d > u.range) {
-        if (sq.mode === 'follow' && w.order === 'gather') moveTo(u, u.slotX, u.slotY, u.speed, dt);
-        else moveTo(u, t.x, t.y, u.speed, dt);
+        if (sq.mode === 'follow' && w.order === 'gather') navMove(w, u, u.slotX, u.slotY, u.speed, dt);
+        else navMove(w, u, t.x, t.y, u.speed, dt);
       } else if (sq.mode === 'follow') {
         // 射程内なら、足を止めずに隊列について行きながら射つ
-        moveTo(u, u.slotX, u.slotY, u.speed, dt);
+        navMove(w, u, u.slotX, u.slotY, u.speed, dt);
       }
       if (d >= u.keep && d <= u.range + 10 && u.cooldown <= 0) {
         u.cooldown = u.interval;
@@ -150,7 +157,7 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
         u.cooldown = Math.min(u.cooldown, 0);
       }
       if (d > contact) {
-        moveTo(u, t.x, t.y, u.speed, dt, contact - 1);
+        navMove(w, u, t.x, t.y, u.speed, dt, contact - 1);
       } else if (u.cooldown <= 0) {
         u.cooldown = u.interval;
         u.swing = 1;
@@ -168,7 +175,7 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
     } else {
       speed = sq.alert ? u.speed : u.speed * ai.returnSpeedMultiplier;
     }
-    moveTo(u, u.slotX, u.slotY, speed, dt);
+    navMove(w, u, u.slotX, u.slotY, speed, dt);
   }
 
   // 突撃：自分の足で一定時間動き続けると構え、止まると解ける

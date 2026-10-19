@@ -1,21 +1,26 @@
 import Phaser from 'phaser';
 import { SOLDIER_KINDS, UNIT_DATA, type SoldierKind } from '../data/unitData';
-import { drawArrow, drawFlag, drawTree, drawUnit } from '../entities/UnitView';
+import { STAGES } from '../data/stageData';
+import { drawArrow, drawFlag, drawUnit } from '../entities/UnitView';
 import type { Unit } from '../entities/Unit';
 import { ARENA, arenaConfig, practiceConfig } from '../systems/Arena';
 import { Random } from '../systems/Random';
+import { stageConfig } from '../systems/Stage';
 import { World, type WorldEvent } from '../systems/World';
 import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
+import { drawField } from '../ui/FieldView';
 import { DPR, TEXT, VIEW_H, VIEW_W, WORLD_ZOOM, fmt, textStyle } from '../ui/Display';
 import { Hud, compositionText } from '../ui/Hud';
 import { Joystick } from '../ui/Joystick';
 import { Minimap } from '../ui/Minimap';
 
-/** squad: 部隊の練習場（旗の部隊を集めて戦う）、duel: 相性の練習場（1部隊対1部隊） */
-type PracticeMode = 'squad' | 'duel';
+/** stage: ステージ、squad: 部隊の練習場（旗の部隊を集めて戦う）、duel: 相性の練習場（1部隊対1部隊） */
+type BattleMode = 'stage' | 'squad' | 'duel';
 
 interface BattleData {
-  mode?: PracticeMode;
+  mode?: BattleMode;
+  stageId?: string;
   allyKind?: SoldierKind;
   enemyKind?: SoldierKind;
 }
@@ -46,10 +51,17 @@ const ORDER_COLORS = {
   toGather: { color: 0x2f6fd6, shadow: 0x1d4a94 },
 };
 
-/** 練習場：部隊を集めて戦う／兵種の相性を試す */
+/** 戦場：ステージ、または練習場（部隊を集めて戦う／兵種の相性を試す） */
 export class BattleScene extends Phaser.Scene {
   private world!: World;
-  private mode: PracticeMode = 'squad';
+  private mode: BattleMode = 'squad';
+  private stageId = 'stage1';
+  private dialog!: Dialog;
+  /** 会話が重なったときに順に出すための待ち行列 */
+  private dialogQueue: string[] = [];
+  private paused = false;
+  private pauseObjects: Phaser.GameObjects.GameObject[] = [];
+  private resultScheduled = false;
   private allyKind: SoldierKind = 'sword';
   private enemyKind: SoldierKind = 'spear';
 
@@ -78,6 +90,11 @@ export class BattleScene extends Phaser.Scene {
 
   init(data: BattleData): void {
     this.mode = data.mode ?? this.mode;
+    this.stageId = data.stageId ?? this.stageId;
+    this.dialogQueue = [];
+    this.paused = false;
+    this.pauseObjects = [];
+    this.resultScheduled = false;
     this.allyKind = data.allyKind ?? this.allyKind;
     this.enemyKind = data.enemyKind ?? this.enemyKind;
     this.labels = new Map();
@@ -90,7 +107,13 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     const seed = Date.now() % 100000;
-    this.world = new World(this.mode === 'squad' ? practiceConfig(seed) : arenaConfig(this.allyKind, this.enemyKind, seed));
+    this.world = new World(
+      this.mode === 'stage'
+        ? stageConfig(STAGES[this.stageId].stage, seed)
+        : this.mode === 'squad'
+          ? practiceConfig(seed)
+          : arenaConfig(this.allyKind, this.enemyKind, seed),
+    );
     this.input.addPointer(2);
 
     // 画面を内部で DPR 倍に描くので、カメラも同じ倍率で拡大する（左上を原点に）
@@ -106,15 +129,17 @@ export class BattleScene extends Phaser.Scene {
     this.toUi(...this.hud.objects);
     this.joystick = new Joystick(this);
     this.toUi(this.joystick.gfx);
-    if (this.mode === 'squad') {
+    if (this.mode !== 'duel') {
       const w = 260;
       this.minimap = new Minimap(this, VIEW_W - 24 - w, 22, w, this.world);
       this.toUi(this.minimap.gfx);
     } else {
       this.createPicker();
     }
-    this.createModeSwitch();
+    this.createPauseButton();
     this.createCommandButtons();
+    this.dialog = new Dialog(this);
+    this.toUi(...this.dialog.objects);
     this.banner = this.add.text(VIEW_W / 2, VIEW_H * 0.3, '', textStyle(40, '#ffd84d')).setOrigin(0.5).setDepth(950).setAlpha(0);
     this.toUi(this.banner);
     if (this.mode === 'squad') this.showBanner(TEXT.squadPracticeHint, '#ffffff', 30);
@@ -134,11 +159,17 @@ export class BattleScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     const dt = Math.min(0.05, delta / 1000);
     const w = this.world;
-    if (w.outcome === 'playing') {
+    // 会話中と「ひとやすみ」中は時間を止める
+    const frozen = this.dialog.open || this.paused;
+    if (w.outcome === 'playing' && !frozen) {
       w.input = this.readInput();
       w.step(dt);
       for (const e of w.events) this.onEvent(e);
-      if (w.outcome !== 'playing') this.time.delayedCall(700, () => this.showResult());
+    }
+    // 勝ち負けが決まったら、会話（クリアの会話など）が終わってから結果を出す
+    if (w.outcome !== 'playing' && !this.dialog.open && !this.resultScheduled) {
+      this.resultScheduled = true;
+      this.time.delayedCall(700, () => this.showResult());
     }
     this.updateEffects(dt);
     this.render();
@@ -165,35 +196,8 @@ export class BattleScene extends Phaser.Scene {
 
   private drawGround(): void {
     const g = this.toWorld(this.add.graphics());
-    const rng = new Random(7);
-    const { width, height } = this.world;
-    const area = (width * height) / (2400 * 1600);
-    g.fillStyle(0x6fb352, 1);
-    g.fillRect(0, 0, width, height);
-    g.fillStyle(0x3c7832, 0.22);
-    for (let i = 0; i < 30 * area; i++) g.fillEllipse(rng.range(0, width), rng.range(0, height), rng.range(160, 440), rng.range(100, 280));
-    for (let i = 0; i < 700 * area; i++) {
-      g.fillStyle(i % 2 ? 0x5f9a45 : 0x7db85c, 1);
-      const s = rng.range(3, 7);
-      g.fillEllipse(rng.range(0, width), rng.range(0, height), s * 2, s);
-    }
-    const flowers = [0xffffff, 0xffd84d, 0xff9ec4];
-    for (let i = 0; i < 120 * area; i++) {
-      g.fillStyle(flowers[i % 3], 1);
-      g.fillCircle(rng.range(0, width), rng.range(0, height), 3);
-    }
-    // 森：当たり判定の円の中に木を並べる
-    for (const o of this.world.obstacles) {
-      const n = Math.round(o.r / 9);
-      const trees: { x: number; y: number; s: number }[] = [];
-      for (let i = 0; i < n; i++) {
-        const a = rng.range(0, Math.PI * 2);
-        const d = Math.sqrt(rng.next()) * (o.r - 14);
-        trees.push({ x: o.x + Math.cos(a) * d, y: o.y + Math.sin(a) * d * 0.8 + 20, s: rng.range(0.85, 1.2) });
-      }
-      trees.sort((a, b) => a.y - b.y);
-      for (const t of trees) drawTree(g, t.x, t.y, t.s);
-    }
+    const terrain = this.mode === 'stage' ? STAGES[this.stageId].stage.terrain : null;
+    drawField(g, this.world.width, this.world.height, this.world.obstacles, terrain, new Random(7));
   }
 
   /** いま見えている戦場の範囲（カメラは左上を原点に拡大しているので、Phaser の worldView は使わない） */
@@ -218,7 +222,8 @@ export class BattleScene extends Phaser.Scene {
       alive.push(u);
     }
     alive.sort((a, b) => a.y - b.y);
-    for (const u of alive) drawUnit(g, u);
+    const guarded = w.isGeneralGuarded();
+    for (const u of alive) drawUnit(g, u, u === w.general && guarded);
     for (const a of w.arrows) drawArrow(g, a);
     for (const sq of w.squads) {
       if (sq.mode === 'neutral' && sq.aliveCount > 0) {
@@ -248,7 +253,11 @@ export class BattleScene extends Phaser.Scene {
       shown.add(key);
       const c = sq.center();
       const stats = UNIT_DATA.kinds[sq.kind];
-      if (sq.mode === 'neutral') {
+      if (sq === w.generalSquad) {
+        label.setText(STAGES[this.stageId].stage.general?.name ?? stats.name);
+        label.setColor('#ffcc1f');
+        label.setPosition(c.x, c.y - 84);
+      } else if (sq.mode === 'neutral') {
         label.setText(`${stats.name}\n${TEXT.flag}`);
         label.setColor('#ffffff');
         label.setPosition(c.x, c.y - 96);
@@ -321,6 +330,12 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'whistle':
         this.showBanner(TEXT.whistleCall, '#ffe066');
+        break;
+      case 'dialog':
+        this.openDialog(e.key);
+        break;
+      case 'guarded':
+        if (rng.next() < 0.15) this.popup(e.x, e.y - 90, TEXT.guarded, '#ffe066');
         break;
       case 'reinforce': {
         this.showBanner(fmt(TEXT.reinforced, { n: e.count }), '#ffd84d');
@@ -420,7 +435,7 @@ export class BattleScene extends Phaser.Scene {
    */
   private command(fn: () => void): void {
     const w = this.world;
-    if (w.outcome !== 'playing') return;
+    if (w.outcome !== 'playing' || this.dialog.open || this.paused) return;
     const n = w.events.length;
     fn();
     for (const e of w.events.slice(n)) this.onEvent(e);
@@ -433,21 +448,80 @@ export class BattleScene extends Phaser.Scene {
     this.orderButton.setLabel(charging ? TEXT.toGather : TEXT.toCharge).setColors(c.color, c.shadow);
   }
 
-  /** 上のまんなか：2つの練習場を切り替える */
-  private createModeSwitch(): void {
-    const toSquad = this.mode === 'duel';
+  // ---- 会話 ----
+
+  /** 会話を出す。ほかの会話が開いていたら、終わってから順に出す */
+  private openDialog(key: string): void {
+    if (this.mode !== 'stage') return;
+    if (this.dialog.open) {
+      this.dialogQueue.push(key);
+      return;
+    }
+    const story = STAGES[this.stageId].story;
+    const lines = story.dialogs[key];
+    if (!lines) return;
+    this.joystick.release();
+    this.dialog.show(lines, story.speakers, () => {
+      const next = this.dialogQueue.shift();
+      if (next) this.openDialog(next);
+    });
+  }
+
+  // ---- ひとやすみ ----
+
+  /** 上のまんなか：「ひとやすみ」（止めて、つづける／はじめから／タイトルへ を選ぶ） */
+  private createPauseButton(): void {
     const b = new Button(this, {
       x: VIEW_W / 2,
       y: 40,
-      w: 250,
+      w: 220,
       h: 56,
-      label: toSquad ? TEXT.toSquadPractice : TEXT.toDuelPractice,
-      fontSize: 24,
+      label: TEXT.pause,
+      fontSize: 26,
       color: 0x7a5bc7,
       shadow: 0x4f3a87,
-      onTap: () => this.scene.restart({ mode: toSquad ? 'squad' : 'duel', allyKind: this.allyKind, enemyKind: this.enemyKind }),
+      onTap: () => this.openPause(),
     });
     this.toUi(...b.objects);
+  }
+
+  private openPause(): void {
+    if (this.paused || this.dialog.open || this.world.outcome !== 'playing') return;
+    this.paused = true;
+    this.joystick.release();
+    const dim = this.add.graphics().setDepth(1100);
+    dim.fillStyle(0x0a0f08, 0.6);
+    dim.fillRect(0, 0, VIEW_W, VIEW_H);
+    // 画面のどこを押しても、後ろのスティックやボタンが動かないようにふさぐ
+    const blocker = this.add.zone(VIEW_W / 2, VIEW_H / 2, VIEW_W, VIEW_H).setInteractive().setDepth(1101);
+    const title = this.add.text(VIEW_W / 2, 170, TEXT.pause, textStyle(52)).setOrigin(0.5).setDepth(1102);
+    const items: { label: string; color: number; shadow: number; onTap: () => void }[] = [
+      { label: TEXT.resume, color: 0xd94f3a, shadow: 0x9c3426, onTap: () => this.closePause() },
+      { label: TEXT.restart, color: 0x3f6fd8, shadow: 0x2a4fa3, onTap: () => this.restartWith(this.allyKind, this.enemyKind) },
+    ];
+    if (this.mode !== 'stage') {
+      const toSquad = this.mode === 'duel';
+      items.push({
+        label: toSquad ? TEXT.toSquadPractice : TEXT.toDuelPractice,
+        color: 0x7a5bc7,
+        shadow: 0x4f3a87,
+        onTap: () => this.scene.restart({ mode: toSquad ? 'squad' : 'duel', allyKind: this.allyKind, enemyKind: this.enemyKind }),
+      });
+    }
+    items.push({ label: TEXT.toTitle, color: 0x6e6250, shadow: 0x4a4136, onTap: () => this.scene.start('Title') });
+    const objs: Phaser.GameObjects.GameObject[] = [dim, blocker, title];
+    items.forEach((it, i) => {
+      const b = new Button(this, { x: VIEW_W / 2, y: 290 + i * 110, w: 380, h: 86, fontSize: 34, depth: 1110, ...it });
+      objs.push(...b.objects);
+    });
+    this.toUi(...objs);
+    this.pauseObjects = objs;
+  }
+
+  private closePause(): void {
+    for (const o of this.pauseObjects) o.destroy();
+    this.pauseObjects = [];
+    this.paused = false;
   }
 
   // ---- 相性の練習場の兵種えらび ----
@@ -500,7 +574,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private restartWith(allyKind: SoldierKind, enemyKind: SoldierKind): void {
-    this.scene.restart({ mode: this.mode, allyKind, enemyKind });
+    this.scene.restart({ mode: this.mode, stageId: this.stageId, allyKind, enemyKind });
   }
 
   private showResult(): void {
@@ -509,28 +583,32 @@ export class BattleScene extends Phaser.Scene {
     this.joystick.release();
     const w = this.world;
     const won = w.outcome === 'won';
+    const objs: Phaser.GameObjects.GameObject[] = [];
     const dim = this.add.graphics().setDepth(1100);
     dim.fillStyle(0x0a0f08, 0.6);
     dim.fillRect(0, 0, VIEW_W, VIEW_H);
     dim.fillStyle(0xf5efe0, 1);
-    dim.fillRoundedRect(VIEW_W / 2 - 260, VIEW_H / 2 - 180, 520, 360, 28);
-    const title = this.add
-      .text(VIEW_W / 2, VIEW_H / 2 - 110, won ? TEXT.win : TEXT.lose, textStyle(52, won ? '#d94f3a' : '#3b4a66', false))
-      .setOrigin(0.5)
-      .setDepth(1101);
-    const survivors = this.mode === 'squad' ? w.countFollowing() : w.countAlive('ally');
-    const sub = this.add
-      .text(VIEW_W / 2, VIEW_H / 2 - 30, fmt(TEXT.survivors, { n: survivors }), textStyle(28, '#2b2418', false))
-      .setOrigin(0.5)
-      .setDepth(1101);
-    const hint = this.add
-      .text(VIEW_W / 2, VIEW_H / 2 + 20, this.mode === 'duel' ? matchupHint(this.allyKind, this.enemyKind) : '', textStyle(24, '#6e6250', false))
-      .setOrigin(0.5)
-      .setDepth(1101);
-    const btn = new Button(this, {
+    dim.fillRoundedRect(VIEW_W / 2 - 300, VIEW_H / 2 - 220, 600, 440, 28);
+    objs.push(dim, this.add.zone(VIEW_W / 2, VIEW_H / 2, VIEW_W, VIEW_H).setInteractive().setDepth(1101));
+    const text = (y: number, s: string, size: number, color: string) => {
+      objs.push(this.add.text(VIEW_W / 2, y, s, textStyle(size, color, false)).setOrigin(0.5).setDepth(1102));
+    };
+    const stage = this.mode === 'stage';
+    text(VIEW_H / 2 - 160, won ? (stage ? TEXT.stageClear : TEXT.win) : TEXT.lose, 52, won ? '#d94f3a' : '#3b4a66');
+    const survivors = this.mode === 'duel' ? w.countAlive('ally') : w.countFollowing();
+    if (stage) {
+      const s = Math.floor(w.time);
+      const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      text(VIEW_H / 2 - 80, `${TEXT.clearTime}  ${time}`, 30, '#2b2418');
+      text(VIEW_H / 2 - 35, `${TEXT.survivorsShort}  ${survivors}　${TEXT.kills}  ${w.kills}`, 30, '#2b2418');
+    } else {
+      text(VIEW_H / 2 - 60, fmt(TEXT.survivors, { n: survivors }), 30, '#2b2418');
+      if (this.mode === 'duel') text(VIEW_H / 2 - 10, matchupHint(this.allyKind, this.enemyKind), 26, '#6e6250');
+    }
+    const retry = new Button(this, {
       x: VIEW_W / 2,
-      y: VIEW_H / 2 + 105,
-      w: 300,
+      y: VIEW_H / 2 + 70,
+      w: 340,
       h: 84,
       label: TEXT.retry,
       fontSize: 34,
@@ -539,7 +617,19 @@ export class BattleScene extends Phaser.Scene {
       onTap: () => this.restartWith(this.allyKind, this.enemyKind),
       depth: 1110,
     });
-    this.toUi(dim, title, sub, hint, ...btn.objects);
+    const toTitle = new Button(this, {
+      x: VIEW_W / 2,
+      y: VIEW_H / 2 + 165,
+      w: 340,
+      h: 72,
+      label: TEXT.toTitle,
+      fontSize: 30,
+      color: 0x6e6250,
+      shadow: 0x4a4136,
+      onTap: () => this.scene.start('Title'),
+      depth: 1110,
+    });
+    this.toUi(...objs, ...retry.objects, ...toTitle.objects);
   }
 
   // ---- カメラの振り分け ----

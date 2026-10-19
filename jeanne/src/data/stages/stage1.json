@@ -1,0 +1,88 @@
+{
+  "id": "stage1",
+  "title": "村を守れ",
+  "subtitle": "1428年　ドンレミ村の近く",
+  "width": 3600,
+  "height": 2400,
+  "groundColor": "#6fb352",
+  "terrain": {
+    "rivers": [{ "x": 1700, "y": 0, "w": 110, "h": 2400 }],
+    "walls": [],
+    "bridges": [
+      { "x": 1670, "y": 1120, "w": 170, "h": 170 },
+      { "x": 1670, "y": 280, "w": 170, "h": 120 }
+    ],
+    "gates": [],
+    "forests": [
+      { "x": 900, "y": 380, "r": 150 },
+      { "x": 480, "y": 950, "r": 130 },
+      { "x": 1300, "y": 2180, "r": 120 },
+      { "x": 1120, "y": 1100, "r": 80 },
+      { "x": 1530, "y": 650, "r": 90 },
+      { "x": 2420, "y": 1750, "r": 130 },
+      { "x": 2250, "y": 520, "r": 110 },
+      { "x": 3300, "y": 1350, "r": 150 },
+      { "x": 2850, "y": 2100, "r": 150 },
+      { "x": 3420, "y": 2150, "r": 110 }
+    ],
+    "roads": [
+      [[440, 1960], [800, 1800], [1200, 1500], [1500, 1260], [1670, 1205], [1840, 1205], [2200, 1100], [2600, 850], [3000, 560], [3170, 470]],
+      [[1840, 340], [2000, 380], [2600, 420], [2950, 460]]
+    ],
+    "houses": [
+      { "x": 250, "y": 1700 }, { "x": 400, "y": 1630 }, { "x": 560, "y": 1720 },
+      { "x": 240, "y": 1890 }, { "x": 600, "y": 1910 }, { "x": 260, "y": 2090 }, { "x": 470, "y": 2140 }
+    ],
+    "tents": [{ "x": 2950, "y": 300 }, { "x": 3380, "y": 300 }, { "x": 2980, "y": 650 }, { "x": 3400, "y": 640 }]
+  },
+  "start": {
+    "hero": { "x": 440, "y": 1960, "dir": [1, 0] },
+    "jeanne": null
+  },
+  "squads": [
+    { "id": "militiaSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 720, "y": 1640 },
+    { "id": "militiaSpear", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 820, "y": 2120 },
+    { "id": "farmSpear", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 1180, "y": 760 },
+    { "id": "farmSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 1450, "y": 1720 },
+    { "id": "riverSpear", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 1960, "y": 1900 },
+    { "id": "campSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 2550, "y": 1300 },
+
+    { "id": "raider1", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 1120, "y": 1900, "dir": [-1, 0] },
+    { "id": "raider2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 1260, "y": 1430, "dir": [-1, 0] },
+    { "id": "patrolW", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 1300, "y": 420, "patrol": [[1300, 420], [1300, 900]] },
+    { "id": "bridgeSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2080, "y": 1080, "dir": [-1, 0] },
+    { "id": "bridgeSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 2120, "y": 1450, "dir": [-1, 0] },
+    { "id": "patrolE", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2650, "y": 1000, "patrol": [[2650, 1000], [2900, 1500], [2600, 1550]] },
+    { "id": "guard1", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2950, "y": 480, "dir": [-1, 0] },
+    { "id": "guard2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 3170, "y": 640, "dir": [0, 1] },
+    { "id": "guard3", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 3380, "y": 460, "dir": [-1, 0] }
+  ],
+  "general": {
+    "id": "boss",
+    "name": "野盗の頭",
+    "x": 3170,
+    "y": 430,
+    "dir": [-1, 0],
+    "hp": 120,
+    "attack": 4,
+    "guards": ["guard1", "guard2", "guard3"]
+  },
+  "events": [
+    { "id": "start", "when": { "time": 0 }, "do": [{ "dialog": "start" }] },
+    {
+      "id": "raid",
+      "when": { "heroIn": { "x": 1840, "y": 700, "w": 900, "h": 1100 }, "squadsWiped": ["bridgeSword", "bridgeSpear"] },
+      "do": [
+        { "dialog": "mid" },
+        {
+          "spawn": [
+            { "id": "raidCav1", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2350, "y": 2330, "route": [[2350, 2330], [2150, 1600], [2000, 1300]], "speed": 90, "alertRadius": 350 },
+            { "id": "raidCav2", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2650, "y": 2300, "route": [[2650, 2300], [2350, 1650], [2150, 1350]], "speed": 90, "alertRadius": 350 }
+          ]
+        }
+      ]
+    },
+    { "id": "boss", "when": { "generalAlert": true }, "do": [{ "dialog": "general" }] },
+    { "id": "clear", "when": { "generalDead": true }, "do": [{ "dialog": "clear" }, { "victory": true }] }
+  ]
+}

@@ -30,5 +30,22 @@
   "whistle": "集合の笛",
   "whistleCall": "みんな あつまれ！",
   "squadCount": "ぶたい {n}/{max}",
-  "noSquads": "なかま なし"
+  "noSquads": "なかま なし",
+  "title": "ジャンヌの騎士",
+  "titleRuby": "きし",
+  "titleLead": "ジャンヌ・ダルクを 守る 騎士（きし）に なって 戦おう",
+  "stageButton": "ステージ{n}　{title}",
+  "practice": "れんしゅう",
+  "pause": "ひとやすみ",
+  "resume": "つづける",
+  "restart": "はじめから",
+  "toTitle": "タイトルへ",
+  "tapNext": "タップで つぎへ ▶",
+  "guardsLeft": "大将の まもり あと {n}",
+  "guardsGone": "大将を たおせ！",
+  "guarded": "まもりが かたい！",
+  "stageClear": "ステージ クリア！",
+  "clearTime": "クリアタイム",
+  "kills": "たおした敵",
+  "survivorsShort": "のこった みかた"
 }
