@@ -11,6 +11,12 @@ import { layoutSquad } from './Formation';
 export function updateHoldSquad(w: World, sq: Squad, dt: number): void {
   if (sq.aliveCount === 0) return;
   const ai = w.data.ai;
+  // 待機している部隊は戦わずに持ち場で休む（兵士が戻ってきたときのために並びだけ整える）
+  if (sq.waiting) {
+    sq.alert = false;
+    layoutSquad(sq, sq.postX, sq.postY, sq.dirX, sq.dirY, ai.formationSpacing, ai.formationColumns);
+    return;
+  }
   const c = sq.center();
   const radius = sq.alert ? ai.enemyChaseRadius : (sq.alertRadius ?? ai.enemyAlertRadius);
   sq.alert = w.nearestFoe(sq.side, c.x, c.y, radius) !== null;

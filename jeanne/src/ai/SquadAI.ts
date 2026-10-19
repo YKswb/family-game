@@ -92,8 +92,8 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
   u.cooldown -= dt;
   u.moving = false;
 
-  // 旗の部隊はジャンが来るまでその場で待つ
-  if (sq.mode === 'neutral') {
+  // 旗の部隊と待機している部隊は、戦わずにその場で休む
+  if (sq.mode === 'neutral' || sq.waiting) {
     moveTo(u, u.slotX, u.slotY, u.speed * ai.returnSpeedMultiplier, dt);
     return;
   }
@@ -102,7 +102,7 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
   const fromAnchor = dist(u.x, u.y, e.anchorX, e.anchorY);
 
   // 離れすぎたら戦いをやめて戻る（しばらく目標を選び直さない）
-  if (u.target && (u.target.dead || fromAnchor > e.leash)) {
+  if (u.target && (!w.isTargetable(u.target) || fromAnchor > e.leash)) {
     const tooFar = !u.target.dead;
     w.setTarget(u, null);
     if (tooFar) u.retargetIn = Math.max(u.retargetIn, 0.6);
@@ -115,7 +115,7 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
     if (e.engage > 0 && fromAnchor <= e.leash) {
       const cur = u.target;
       const near = w.nearestFoe(u.side, u.x, u.y, e.engage, u);
-      const keep = cur && !cur.dead && dist(u.x, u.y, cur.x, cur.y) < e.engage + 80;
+      const keep = cur && w.isTargetable(cur) && dist(u.x, u.y, cur.x, cur.y) < e.engage + 80;
       // 今の相手を追い続けるが、それよりはっきり近い相手が来たら乗り換える。
       // 今の相手に斬りかかる人数が上限を超えていたら、空いている相手に回る
       if (!keep) w.setTarget(u, near);

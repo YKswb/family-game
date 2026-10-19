@@ -227,7 +227,7 @@ export class World {
     let any: Unit | null = null;
     let anyD = radius;
     this.grid.forEachNear(x, y, radius + 20, (o) => {
-      if (o.dead || o.side === side || o.squad?.mode === 'neutral') return;
+      if (o.side === side || !this.isTargetable(o)) return;
       const d = this.targetDistance(x, y, o);
       if (d < anyD) {
         anyD = d;
@@ -259,6 +259,14 @@ export class World {
       if (t) t.attackers++;
     }
     u.target = t;
+  }
+
+  /**
+   * 狙える相手か。旗の部隊と待機している部隊は「休んでいる仲間」なので、戦わず、狙われもしない
+   * （待機部隊は補充の拠点。戻ってきた兵士が近くの敵にすぐ倒されないように）
+   */
+  isTargetable(o: Unit): boolean {
+    return !o.dead && o.squad?.mode !== 'neutral' && !o.squad?.waiting;
   }
 
   /** 狙う相手を選ぶときの距離（体の大きさを引き、ジャンは少し遠い扱い） */
@@ -465,7 +473,8 @@ export class World {
 
   /** attacker の一撃（近接・矢の両方）を target に当てる */
   strike(attacker: Unit, target: Unit): void {
-    if (target.dead) return;
+    // 休んでいる仲間（旗・待機の部隊）には、飛んできた矢なども当たらない
+    if (!this.isTargetable(target)) return;
     // 大将は護衛が残っているあいだ無敵
     if (target === this.general && this.isGeneralGuarded()) {
       target.hitFlash = 0.05;

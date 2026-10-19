@@ -10,6 +10,8 @@ const COLOR = {
   enemy: 0xff5a4f,
   /** 旗を立てて待っている部隊（まだ仲間ではない） */
   neutral: 0xa8b0b8,
+  /** 待機して休んでいる仲間（戦わず、狙われない） */
+  resting: 0x9fc3ff,
   hero: 0xffd04a,
   /** 敵の大将 */
   general: 0x2a2a33,
@@ -37,7 +39,8 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
   const isHero = u.kind === 'hero';
   const isGen = u.kind === 'general';
   const flash = u.hitFlash > 0;
-  const team = u.squad?.mode === 'neutral' ? COLOR.neutral : u.side === 'ally' ? COLOR.ally : COLOR.enemy;
+  const team =
+    u.squad?.mode === 'neutral' ? COLOR.neutral : u.squad?.waiting ? COLOR.resting : u.side === 'ally' ? COLOR.ally : COLOR.enemy;
   const body = flash ? COLOR.flash : isHero ? COLOR.hero : isGen ? COLOR.general : team;
   const bob = u.moving ? Math.abs(Math.sin(u.bob)) * 2 : 0;
   const r = u.radius;

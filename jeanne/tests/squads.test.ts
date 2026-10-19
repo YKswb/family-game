@@ -189,6 +189,21 @@ describe('仲間化', () => {
     expect(cav.alive[0].kind).toBe('cavalry');
   });
 
+  it('待機部隊は戦わず、敵のすぐそばでも狙われないので、戻った兵士がたまっていく', () => {
+    const w = withWaitingCavalry();
+    const cav = w.squads[3];
+    kill(w, 3, 10);
+    // 待機の騎馬隊のすぐそばに敵の剣士隊を置く（ジャンは遠くへ）
+    walkTo(w, 300, 500);
+    w.addSquad({ side: 'enemy', mode: 'hold', kind: 'sword', count: 10, x: cav.postX + 120, y: cav.postY, dir: [-1, 0] });
+    const enemy = w.squads[4];
+    const before = cav.aliveCount;
+    wait(w, UNIT_DATA.ai.waitingReviveSeconds * 5);
+    expect(cav.aliveCount).toBe(before + 5);
+    expect(enemy.alert).toBe(false);
+    expect(enemy.units.some((u) => u.target)).toBe(false);
+  });
+
   it('率いている部隊・旗の部隊・敵の部隊は、兵士が戻らない', () => {
     const w = new World({
       width: 3000,
