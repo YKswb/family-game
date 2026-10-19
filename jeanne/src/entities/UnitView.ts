@@ -29,8 +29,11 @@ const COLOR = {
   hpLow: 0xff5a4f,
 };
 
-/** guarded：大将が護衛に守られていて無敵のときに、守りの輪を描く */
-export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = false): void {
+/**
+ * guarded：大将が護衛に守られていて無敵のときに、守りの輪を描く
+ * guardRing：大将を守る護衛の兵士の足元に、金色の輪を描く
+ */
+export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = false, guardRing = false): void {
   const isHero = u.kind === 'hero';
   const isGen = u.kind === 'general';
   const flash = u.hitFlash > 0;
@@ -43,6 +46,10 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
   g.translateCanvas(u.x, u.y);
   g.fillStyle(COLOR.shadow, 0.2);
   g.fillEllipse(0, 2, r * 2.2, r * 0.9);
+  if (guardRing) {
+    g.lineStyle(3, COLOR.gold, 0.95);
+    g.strokeEllipse(0, 2, r * 3, r * 1.3);
+  }
   g.scaleCanvas(u.face, 1);
 
   if (u.kind === 'cavalry') {

@@ -64,6 +64,9 @@ export class BattleScene extends Phaser.Scene {
   private resultScheduled = false;
   /** 「たいきの なかまに さわると ほじゅう」の案内を次に出せるまでの秒数 */
   private refillHintCooldown = 0;
+  /** 「まもりが かたい！」の吹き出しと、何をすればよいかの案内を、出しすぎないための待ち時間 */
+  private guardPopupCooldown = 0;
+  private guardBannerCooldown = 0;
   private allyKind: SoldierKind = 'sword';
   private enemyKind: SoldierKind = 'spear';
 
@@ -75,6 +78,8 @@ export class BattleScene extends Phaser.Scene {
   private joystick!: Joystick;
   private orderButton!: Button;
   private banner!: Phaser.GameObjects.Text;
+  /** 案内の文字の後ろに敷く暗い帯（兵士や名札と重なっても読めるように） */
+  private bannerBg!: Phaser.GameObjects.Graphics;
   private bannerT = BANNER_LIFE;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   /** 部隊の名札。率いている部隊は兵種のかたまりごとに1枚（キーは "部隊id:兵種"） */
@@ -98,6 +103,8 @@ export class BattleScene extends Phaser.Scene {
     this.pauseObjects = [];
     this.resultScheduled = false;
     this.refillHintCooldown = 0;
+    this.guardPopupCooldown = 0;
+    this.guardBannerCooldown = 0;
     this.allyKind = data.allyKind ?? this.allyKind;
     this.enemyKind = data.enemyKind ?? this.enemyKind;
     this.labels = new Map();
@@ -143,8 +150,9 @@ export class BattleScene extends Phaser.Scene {
     this.createCommandButtons();
     this.dialog = new Dialog(this);
     this.toUi(...this.dialog.objects);
-    this.banner = this.add.text(VIEW_W / 2, VIEW_H * 0.3, '', textStyle(40, '#ffd84d')).setOrigin(0.5).setDepth(950).setAlpha(0);
-    this.toUi(this.banner);
+    this.banner = this.add.text(VIEW_W / 2, VIEW_H * 0.3, '', textStyle(40, '#ffd84d')).setOrigin(0.5).setAlign('center').setDepth(950).setAlpha(0);
+    this.bannerBg = this.add.graphics().setDepth(949).setAlpha(0);
+    this.toUi(this.banner, this.bannerBg);
     if (this.mode === 'squad') this.showBanner(TEXT.squadPracticeHint, '#ffffff', 30);
 
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
@@ -227,7 +235,7 @@ export class BattleScene extends Phaser.Scene {
     }
     alive.sort((a, b) => a.y - b.y);
     const guarded = w.isGeneralGuarded();
-    for (const u of alive) drawUnit(g, u, u === w.general && guarded);
+    for (const u of alive) drawUnit(g, u, u === w.general && guarded, guarded && !!u.squad && w.isGuardSquad(u.squad));
     for (const a of w.arrows) drawArrow(g, a);
     for (const sq of w.squads) {
       if (sq.mode === 'neutral' && sq.aliveCount > 0) {
@@ -258,7 +266,9 @@ export class BattleScene extends Phaser.Scene {
       const c = sq.center();
       const stats = UNIT_DATA.kinds[sq.kind];
       if (sq === w.generalSquad) {
-        label.setText(STAGES[this.stageId].stage.general?.name ?? stats.name);
+        const name = STAGES[this.stageId].stage.general?.name ?? stats.name;
+        const n = w.guardsLeft();
+        label.setText(n > 0 ? fmt(TEXT.generalGuardedLabel, { name, n }) : name);
         label.setColor('#ffcc1f');
         label.setPosition(c.x, c.y - 84);
       } else if (sq.mode === 'neutral') {
@@ -268,6 +278,10 @@ export class BattleScene extends Phaser.Scene {
       } else if (sq.waiting) {
         label.setText(`${compositionText(sq)} ${TEXT.waiting}`);
         label.setColor('#d6e4ff');
+        label.setPosition(c.x, c.y - 40);
+      } else if (w.isGuardSquad(sq)) {
+        label.setText(fmt(TEXT.guardLabel, { comp: compositionText(sq) }));
+        label.setColor('#ffcc1f');
         label.setPosition(c.x, c.y - 40);
       } else {
         label.setText(compositionText(sq));
@@ -339,7 +353,21 @@ export class BattleScene extends Phaser.Scene {
         this.openDialog(e.key);
         break;
       case 'guarded':
-        if (rng.next() < 0.15) this.popup(e.x, e.y - 90, TEXT.guarded, '#ffe066');
+        // 大将を攻撃しても効かないときは、何をすればよいかを画面のまんなかに出す
+        if (this.guardPopupCooldown <= 0) {
+          this.popup(e.x, e.y - 90, TEXT.guarded, '#ffe066');
+          this.guardPopupCooldown = 1;
+        }
+        if (this.guardBannerCooldown <= 0) {
+          this.showBanner(TEXT.guardedBanner, '#ffe066', 34);
+          this.guardBannerCooldown = 8;
+        }
+        break;
+      case 'squadWiped':
+        if (this.world.isGuardSquad(e.squad)) {
+          const n = this.world.guardsLeft();
+          this.showBanner(n > 0 ? fmt(TEXT.guardDown, { n }) : TEXT.guardsAllDown, '#ffcc1f');
+        }
         break;
       case 'revive':
         this.burst(e.x, e.y - 14, 0x9fc3ff, 10, 120, 4);
@@ -371,6 +399,11 @@ export class BattleScene extends Phaser.Scene {
 
   private showBanner(s: string, color: string, size = 40): void {
     this.banner.setText(s).setColor(color).setFontSize(size).setAlpha(1);
+    const b = this.banner.getBounds();
+    this.bannerBg.clear();
+    this.bannerBg.fillStyle(0x000000, 0.55);
+    this.bannerBg.fillRoundedRect(b.x - 24, b.y - 12, b.width + 48, b.height + 24, 18);
+    this.bannerBg.setAlpha(1);
     this.bannerT = 0;
   }
 
@@ -400,6 +433,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private updateEffects(dt: number): void {
+    this.guardPopupCooldown = Math.max(0, this.guardPopupCooldown - dt);
+    this.guardBannerCooldown = Math.max(0, this.guardBannerCooldown - dt);
     for (const p of this.particles) {
       p.t += dt;
       p.x += p.vx * dt;
@@ -416,7 +451,9 @@ export class BattleScene extends Phaser.Scene {
     this.popups = this.popups.filter((p) => p.t < POPUP_LIFE);
     if (this.bannerT < BANNER_LIFE) {
       this.bannerT += dt;
-      this.banner.setAlpha(Math.min(1, (BANNER_LIFE - this.bannerT) / 0.5));
+      const a = Math.min(1, (BANNER_LIFE - this.bannerT) / 0.5);
+      this.banner.setAlpha(a);
+      this.bannerBg.setAlpha(a);
     }
   }
 

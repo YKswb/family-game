@@ -42,7 +42,7 @@ export class Minimap {
     for (const u of world.units) {
       if (u.dead || u === world.hero) continue;
       const sq = u.squad;
-      let color = 0xff5a4f;
+      let color = sq && world.isGuardSquad(sq) ? 0xffcc1f : 0xff5a4f;
       if (u.side === 'ally') color = sq?.mode === 'neutral' ? 0xe8e8e8 : sq?.waiting ? 0x9fc3ff : 0x4f8dff;
       g.fillStyle(color, 1);
       g.fillRect(px(u.x) - 1, py(u.y) - 1, 2.4, 2.4);

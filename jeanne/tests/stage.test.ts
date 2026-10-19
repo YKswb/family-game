@@ -82,6 +82,19 @@ describe('ステージ1の仕組み', () => {
     expect(g.hp).toBeLessThan(hp);
   });
 
+  it('護衛の部隊が分かる（金色の輪の対象）。護衛を倒すと全滅の知らせが出る', () => {
+    const w = make();
+    const guards = STAGES.stage1.stage.general!.guards;
+    for (const sq of w.squads) expect(w.isGuardSquad(sq)).toBe(guards.includes(sq.name));
+    const g1 = w.squadById(guards[0])!;
+    for (const u of g1.units.slice(1)) u.dead = true;
+    w.strike(w.hero, g1.alive[0]);
+    w.strike(w.hero, g1.alive[0]);
+    expect(g1.aliveCount).toBe(0);
+    expect(w.events).toContainEqual({ type: 'squadWiped', squad: g1 });
+    expect(w.guardsLeft()).toBe(guards.length - 1);
+  });
+
   it('大将が倒れると「クリア」の会話が起きて勝ちになる', () => {
     const w = make();
     w.general!.dead = true;

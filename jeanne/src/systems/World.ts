@@ -293,6 +293,11 @@ export class World {
     return n;
   }
 
+  /** 大将を守る護衛の部隊か */
+  isGuardSquad(sq: Squad): boolean {
+    return this.guardIds.includes(sq.name);
+  }
+
   isGeneralGuarded(): boolean {
     return this.guardsLeft() > 0;
   }
