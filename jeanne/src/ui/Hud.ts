@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { UNIT_DATA } from '../data/unitData';
 import type { Squad } from '../entities/Squad';
+import { xpToNext } from '../systems/Progress';
 import type { World } from '../systems/World';
 import { TEXT, fmt, textStyle } from './Display';
 
@@ -43,13 +44,20 @@ export class Hud {
     const hasGeneral = !!w.general;
     g.fillRoundedRect(14, 12, 360, hasGeneral ? 200 : 166, 18);
     // HPバー
-    const bx = 110;
-    const bw = 244;
+    const bx = 150;
+    const bw = 204;
     g.fillStyle(0xffffff, 0.25);
     g.fillRoundedRect(bx, 26, bw, 20, 10);
     const ratio = Math.max(0, h.hp / h.maxHp);
     g.fillStyle(ratio > 0.3 ? 0x5bd16a : 0xff5a4f, 1);
     g.fillRoundedRect(bx, 26, Math.max(8, bw * ratio), 20, 10);
+    // 経験値のバー（HPのすぐ下）
+    const xr = Math.min(1, w.xp / xpToNext(w.level));
+    g.fillStyle(0xffffff, 0.18);
+    g.fillRoundedRect(bx, 50, bw, 6, 3);
+    g.fillStyle(0xffe066, 1);
+    if (xr > 0) g.fillRoundedRect(bx, 50, Math.max(4, bw * xr), 6, 3);
+    this.name.setText(`${TEXT.heroName} ${fmt(TEXT.levelShort, { n: w.level })}`);
 
     const charge = w.order === 'charge';
     this.order.setText(fmt(TEXT.orderLabel, { order: charge ? TEXT.orderCharge : TEXT.orderGather }));

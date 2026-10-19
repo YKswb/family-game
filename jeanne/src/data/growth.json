@@ -1,0 +1,25 @@
+{
+  "xp": {
+    "perKill": { "soldier": 1, "captain": 5, "general": 30 },
+    "squadKillRatio": 0.5
+  },
+  "level": {
+    "cap": 30,
+    "base": 20,
+    "exponent": 1.5,
+    "perLevel": { "hp": 6, "attack": 0.3, "speed": 1 },
+    "leadershipAt": [5, 10, 15, 20]
+  },
+  "points": {
+    "attack": { "name": "攻撃", "ruby": "こうげき", "effect": "攻撃 +0.4", "per": 0.4, "max": 50 },
+    "defense": { "name": "守り", "ruby": "まもり", "effect": "受けるダメージ -1%", "per": 0.01, "max": 40 },
+    "vitality": { "name": "体力", "ruby": "たいりょく", "effect": "さいだいHP +8", "per": 8, "max": 50 },
+    "agility": { "name": "俊足", "ruby": "しゅんそく", "effect": "はやさ +2", "per": 2, "max": 30 },
+    "command": { "name": "統率", "ruby": "とうそつ", "effect": "部隊の攻撃 +1%", "per": 0.01, "max": 50 },
+    "morale": { "name": "鼓舞", "ruby": "こぶ", "effect": "部隊のHP +2%", "per": 0.02, "max": 50 }
+  },
+  "stars": {
+    "timeSeconds": 600,
+    "survivorRatio": 0.5
+  }
+}

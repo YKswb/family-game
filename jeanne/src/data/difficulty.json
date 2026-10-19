@@ -1,0 +1,26 @@
+{
+  "easy": {
+    "name": "かんたん",
+    "note": "てきが すくない。たおれた なかまが はやく ふっかつする",
+    "enemyHp": 0.8,
+    "enemyCount": 0.8,
+    "revive": true,
+    "reviveSeconds": 6
+  },
+  "normal": {
+    "name": "ふつう",
+    "note": "たおれた なかまが ゆっくり ふっかつする",
+    "enemyHp": 1,
+    "enemyCount": 1,
+    "revive": true,
+    "reviveSeconds": 10
+  },
+  "hard": {
+    "name": "むずかしい",
+    "note": "てきが おおくて つよい。なかまは ふっかつしない",
+    "enemyHp": 1.25,
+    "enemyCount": 1.25,
+    "revive": false,
+    "reviveSeconds": 10
+  }
+}

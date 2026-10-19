@@ -5,6 +5,8 @@ import { drawArrow, drawFlag, drawUnit } from '../entities/UnitView';
 import type { Unit } from '../entities/Unit';
 import { ARENA, arenaConfig, practiceConfig } from '../systems/Arena';
 import { Random } from '../systems/Random';
+import { DIFFICULTY, freePointsFor, starsFor } from '../systems/Progress';
+import { Session } from '../systems/Session';
 import { stageConfig } from '../systems/Stage';
 import { World, type WorldEvent } from '../systems/World';
 import { Button } from '../ui/Button';
@@ -14,6 +16,7 @@ import { DPR, TEXT, VIEW_H, VIEW_W, WORLD_ZOOM, fmt, textStyle } from '../ui/Dis
 import { Hud, compositionText } from '../ui/Hud';
 import { Joystick } from '../ui/Joystick';
 import { Minimap } from '../ui/Minimap';
+import type { IntermissionData } from './Intermission';
 
 /** stage: ステージ、squad: 部隊の練習場（旗の部隊を集めて戦う）、duel: 相性の練習場（1部隊対1部隊） */
 type BattleMode = 'stage' | 'squad' | 'duel';
@@ -119,7 +122,7 @@ export class BattleScene extends Phaser.Scene {
     const seed = Date.now() % 100000;
     this.world = new World(
       this.mode === 'stage'
-        ? stageConfig(STAGES[this.stageId].stage, seed)
+        ? this.stageWorldConfig(seed)
         : this.mode === 'squad'
           ? practiceConfig(seed)
           : arenaConfig(this.allyKind, this.enemyKind, seed),
@@ -181,7 +184,7 @@ export class BattleScene extends Phaser.Scene {
     // 勝ち負けが決まったら、会話（クリアの会話など）が終わってから結果を出す
     if (w.outcome !== 'playing' && !this.dialog.open && !this.resultScheduled) {
       this.resultScheduled = true;
-      this.time.delayedCall(700, () => this.showResult());
+      this.time.delayedCall(700, () => this.finish());
     }
     this.updateEffects(dt);
     this.render();
@@ -375,6 +378,10 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'depotEmpty':
         this.showBanner(TEXT.depotEmpty, '#d6e4ff', 30);
+        break;
+      case 'levelUp':
+        this.showBanner(fmt(TEXT.levelUp, { n: e.level }), '#ffe066');
+        this.burst(this.world.hero.x, this.world.hero.y - 20, 0xffe066, 24, 220, 5);
         break;
       case 'revive':
         this.burst(e.x, e.y - 14, 0x9fc3ff, 10, 120, 4);
@@ -649,6 +656,59 @@ export class BattleScene extends Phaser.Scene {
 
   private restartWith(allyKind: SoldierKind, enemyKind: SoldierKind): void {
     this.scene.restart({ mode: this.mode, stageId: this.stageId, allyKind, enemyKind });
+  }
+
+  /** ステージ：セーブにある成長・難易度・引き継いだ部隊で戦場を作る */
+  private stageWorldConfig(seed: number) {
+    const save = Session.loadOrNew();
+    return {
+      ...stageConfig(STAGES[this.stageId].stage, seed),
+      progress: save.hero,
+      difficulty: DIFFICULTY[save.difficulty],
+      carriedSquads: save.squads,
+    };
+  }
+
+  /**
+   * 勝ち負けが決まったあと。ステージで勝ったら記録してインターミッションへ。
+   * 負けても上がったレベルと経験値は残す（部隊は前の状態のまま）
+   */
+  private finish(): void {
+    if (this.mode !== 'stage') {
+      this.showResult();
+      return;
+    }
+    const w = this.world;
+    const save = Session.loadOrNew();
+    const levelBefore = save.hero.level;
+    save.hero = { ...save.hero, level: w.level, xp: w.xp };
+    if (w.outcome !== 'won') {
+      Session.save(save);
+      this.showResult();
+      return;
+    }
+    const survivors = w.countFollowing();
+    const stars = starsFor(w.time, survivors, w.leadership);
+    const prev = save.cleared[this.stageId];
+    const pointsGot = freePointsFor(w.level, stars, prev ? prev.stars : null);
+    save.cleared[this.stageId] = {
+      stars: Math.max(stars, prev?.stars ?? 0),
+      bestSeconds: Math.min(w.time, prev?.bestSeconds ?? Infinity),
+    };
+    save.unspent += pointsGot;
+    save.squads = w.carriedSquadsOut();
+    Session.save(save);
+    const data: IntermissionData = {
+      stageId: this.stageId,
+      seconds: w.time,
+      stars,
+      kills: w.kills,
+      survivors,
+      xpGained: w.xpGained,
+      levelBefore,
+      pointsGot,
+    };
+    this.scene.start('Intermission', data);
   }
 
   private showResult(): void {

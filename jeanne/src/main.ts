@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/Battle';
 import { BootScene } from './scenes/Boot';
+import { IntermissionScene } from './scenes/Intermission';
+import { StageSelectScene } from './scenes/StageSelect';
 import { TitleScene } from './scenes/Title';
 import { DPR, VIEW_H, VIEW_W } from './ui/Display';
 
@@ -17,5 +19,5 @@ new Phaser.Game({
     height: VIEW_H * DPR,
   },
   input: { activePointers: 3 },
-  scene: [BootScene, TitleScene, BattleScene],
+  scene: [BootScene, TitleScene, StageSelectScene, BattleScene, IntermissionScene],
 });

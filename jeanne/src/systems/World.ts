@@ -10,6 +10,8 @@ import { Random } from './Random';
 import { SpatialGrid } from './Spatial';
 import { EventRunner } from './Events';
 import { Terrain, type Rect } from './Terrain';
+import { addXp, GROWTH, heroStats, leadershipAt, newProgress, squadBonus, type DifficultyData, type HeroProgress } from './Progress';
+import type { SavedSquad } from './Save';
 import type { StageEvent, StageGeneral } from '../data/stageData';
 
 export interface SquadSpec {
@@ -52,6 +54,12 @@ export interface WorldConfig {
   events?: StageEvent[];
   seed?: number;
   data?: UnitData;
+  /** ジャンの成長（レベル・経験値・振り分け）。省略時は Lv1 */
+  progress?: HeroProgress;
+  /** 難易度（敵の倍率と、仲間の復活）。省略時は敵は等倍・復活あり（units.json の秒数） */
+  difficulty?: DifficultyData;
+  /** 前のステージから引き継いだ部隊（ジャンのそばに、率いている部隊として置く） */
+  carriedSquads?: SavedSquad[];
 }
 
 /** gather: しゅうごう（隊列を守る）、charge: とつげき */
@@ -71,7 +79,8 @@ export type WorldEvent =
   | { type: 'order'; order: Order }
   | { type: 'whistle' }
   | { type: 'dialog'; key: string }
-  | { type: 'guarded'; x: number; y: number };
+  | { type: 'guarded'; x: number; y: number }
+  | { type: 'levelUp'; level: number };
 
 export interface Arrow {
   x: number;
@@ -103,6 +112,22 @@ export class World {
   private readonly script: EventRunner | null;
   /** たおした敵の数 */
   kills = 0;
+  /** ジャンのレベルと経験値（このステージで上がった分を含む） */
+  level: number;
+  xp: number;
+  readonly progress: HeroProgress;
+  /** このステージで手に入れた経験値 */
+  xpGained = 0;
+  /** ジャンが受けるダメージの倍率（守り） */
+  private readonly damageTaken: number;
+  /** 統率・鼓舞による、率いている部隊の攻撃とHPの倍率 */
+  private readonly squadAttackMul: number;
+  private readonly squadHpMul: number;
+  /** 敵のHPと人数の倍率、仲間の復活 */
+  private readonly enemyHpMul: number;
+  private readonly enemyCountMul: number;
+  readonly reviveEnabled: boolean;
+  private readonly reviveSeconds: number;
   arrows: Arrow[] = [];
   /** このフレームで起きたこと（描画側が効果を出すのに使う） */
   readonly events: WorldEvent[] = [];
@@ -137,10 +162,28 @@ export class World {
     this.rng = new Random(cfg.seed ?? 1);
     this.grid = new SpatialGrid<Unit>(cfg.width, cfg.height, this.data.ai.gridCell);
     this.hero = new Hero(this.nextId++, this.data.kinds.hero, cfg.hero.x, cfg.hero.y);
-    this.leadership = this.data.kinds.hero.leadership ?? 3;
+    // 成長と振り分けを反映したジャンの能力
+    this.progress = cfg.progress ?? newProgress();
+    this.level = this.progress.level;
+    this.xp = this.progress.xp;
+    const hs = heroStats(this.data.kinds.hero, this.progress);
+    this.hero.maxHp = this.hero.hp = hs.maxHp;
+    this.hero.attack = hs.attack;
+    this.hero.speed = hs.speed;
+    this.leadership = hs.leadership;
+    this.damageTaken = hs.damageTaken;
+    const sb = squadBonus(this.progress.alloc);
+    this.squadAttackMul = sb.attackMul;
+    this.squadHpMul = sb.hpMul;
+    const d = cfg.difficulty;
+    this.enemyHpMul = d?.enemyHp ?? 1;
+    this.enemyCountMul = d?.enemyCount ?? 1;
+    this.reviveEnabled = d?.revive ?? true;
+    this.reviveSeconds = d?.reviveSeconds ?? this.data.ai.waitingReviveSeconds;
     this.units.push(this.hero);
     if (cfg.heroDir) [this.headX, this.headY] = cfg.heroDir;
     for (const s of cfg.squads) this.addSquad(s);
+    for (const c of cfg.carriedSquads ?? []) this.addCarriedSquad(c, cfg.hero.x, cfg.hero.y);
     if (cfg.general) this.addGeneral(cfg.general);
     updateFollowSquads(this);
     for (const sq of this.squads) {
@@ -155,7 +198,9 @@ export class World {
   addSquad(spec: SquadSpec): Squad {
     const [dx, dy] = spec.dir ?? [0, -1];
     const sq = new Squad(this.squads.length, spec.side, spec.kind, spec.mode, spec.x, spec.y, dx, dy);
-    sq.capacity = spec.count;
+    // 難易度：敵の部隊の人数（援軍・伏兵も同じ）
+    const count = spec.side === 'enemy' ? Math.max(1, Math.round(spec.count * this.enemyCountMul)) : spec.count;
+    sq.capacity = count;
     sq.homeX = spec.x;
     sq.homeY = spec.y;
     sq.name = spec.id ?? `squad${sq.id}`;
@@ -167,9 +212,11 @@ export class World {
     sq.alertRadius = spec.alertRadius ?? null;
     sq.alert = !!spec.alert;
     const stats = this.data.kinds[spec.kind];
-    for (let i = 0; i < spec.count; i++) {
+    for (let i = 0; i < count; i++) {
       const u = new Unit(this.nextId++, spec.kind, spec.side, stats, spec.x, spec.y, sq, this.rng.next());
       u.speed *= this.rng.range(0.93, 1.07);
+      if (spec.side === 'enemy') u.maxHp = u.hp = u.hp * this.enemyHpMul;
+      if (spec.mode === 'follow') this.boostForFollow(u);
       sq.units.push(u);
       this.units.push(u);
     }
@@ -284,6 +331,74 @@ export class World {
     return dist(x, y, o.x, o.y) - o.radius + (o.kind === 'hero' ? this.data.ai.heroTargetPenalty : 0);
   }
 
+  // ---- 成長 ----
+
+  /**
+   * 敵を倒したときの経験値。ジャンが倒せば全部、率いている部隊が倒せばその半分。
+   * 大将は30、兵士は1（隊長は5。まだ出てこない）
+   */
+  private gainXpFor(foe: Unit, by: Unit): void {
+    const per = GROWTH.xp.perKill;
+    const base = foe.kind === 'general' ? per.general : per.soldier;
+    let gain = 0;
+    if (by === this.hero) gain = base;
+    else if (by.side === 'ally' && by.squad?.mode === 'follow') gain = base * GROWTH.xp.squadKillRatio;
+    if (gain <= 0) return;
+    this.xpGained += gain;
+    const r = addXp(this.level, this.xp, gain);
+    this.xp = r.xp;
+    if (r.gained === 0) return;
+    // レベルアップはその場で反映し、HPも上がった分だけ回復する
+    const pl = GROWTH.level.perLevel;
+    const h = this.hero;
+    h.maxHp += pl.hp * r.gained;
+    h.hp = Math.min(h.maxHp, h.hp + pl.hp * r.gained);
+    h.attack += pl.attack * r.gained;
+    h.speed += pl.speed * r.gained;
+    this.level = r.level;
+    this.leadership = leadershipAt(this.level, this.data.kinds.hero);
+    this.events.push({ type: 'levelUp', level: this.level });
+  }
+
+  /** 率いている部隊の兵士に、統率（攻撃）と鼓舞（HP）を反映する（1人に1回だけ） */
+  private boostForFollow(u: Unit): void {
+    if (u.boosted || u.side !== 'ally' || u === this.hero) return;
+    u.boosted = true;
+    u.attack *= this.squadAttackMul;
+    u.maxHp *= this.squadHpMul;
+    u.hp *= this.squadHpMul;
+  }
+
+  /** 前のステージから引き継いだ部隊を、ジャンのそばに率いている部隊として置く */
+  private addCarriedSquad(c: SavedSquad, x: number, y: number): void {
+    const total = c.composition.reduce((n, k) => n + k.n, 0);
+    if (total <= 0) return;
+    const sq = new Squad(this.squads.length, 'ally', c.kind, 'follow', x, y, this.headX, this.headY);
+    sq.capacity = Math.max(total, 10);
+    sq.homeX = x;
+    sq.homeY = y;
+    sq.name = `carried${sq.id}`;
+    sq.followIndex = this.nextFollowIndex++;
+    for (const k of c.composition) {
+      for (let i = 0; i < k.n; i++) {
+        const u = new Unit(this.nextId++, k.kind, 'ally', this.data.kinds[k.kind], x, y, sq, this.rng.next());
+        u.speed *= this.rng.range(0.93, 1.07);
+        this.boostForFollow(u);
+        sq.units.push(u);
+        this.units.push(u);
+      }
+    }
+    this.squads.push(sq);
+  }
+
+  /** 次のステージへ引き継ぐ部隊（生き残りの兵種と人数。クリア時に全回復するので HP は持たない） */
+  carriedSquadsOut(): SavedSquad[] {
+    return this.followingSquads().map((sq) => ({
+      kind: sq.kind as SavedSquad['kind'],
+      composition: sq.composition().map((c) => ({ kind: c.kind as SavedSquad['kind'], n: c.n })),
+    }));
+  }
+
   // ---- ステージ ----
 
   /** 大将を、大将ひとりだけの「持ち場を守る部隊」として置く */
@@ -292,7 +407,7 @@ export class World {
     const sq = new Squad(this.squads.length, 'enemy', 'general', 'hold', g.x, g.y, dx, dy);
     sq.name = g.id;
     sq.capacity = 1;
-    const stats = { ...this.data.kinds.general, hp: g.hp, attack: g.attack };
+    const stats = { ...this.data.kinds.general, hp: g.hp * this.enemyHpMul, attack: g.attack };
     const u = new Unit(this.nextId++, 'general', 'enemy', stats, g.x, g.y, sq, this.rng.next());
     sq.units.push(u);
     this.units.push(u);
@@ -370,6 +485,7 @@ export class World {
         sq.alert = false;
         sq.followIndex = this.nextFollowIndex++;
         this.touching.delete(sq);
+        for (const u of sq.units) if (!u.dead) this.boostForFollow(u);
         this.events.push({ type: 'recruit', squad: sq, waiting: false });
       } else if (sq.mode === 'neutral') {
         // 上限を超えたので、旗を下ろしてその場を守る。触れたついでに、減っている部隊へ補充する
@@ -388,6 +504,8 @@ export class World {
    * そこで兵士が少しずつ復活し、ジャンが触れるとまた率いられる
    */
   private returnWipedSquads(): void {
+    // 復活しない難易度では、全滅した部隊はそのまま消える
+    if (!this.reviveEnabled) return;
     for (const sq of this.squads) {
       if (sq.mode !== 'follow' || sq.aliveCount > 0) continue;
       sq.mode = 'hold';
@@ -406,7 +524,8 @@ export class World {
    * 補充で空になった待機部隊も戻ってくるので、補充の拠点として何度も使える
    */
   private reviveWaiting(dt: number): void {
-    const interval = this.data.ai.waitingReviveSeconds;
+    if (!this.reviveEnabled) return;
+    const interval = this.reviveSeconds;
     for (const sq of this.squads) {
       if (!sq.waiting || sq.kind === 'general') continue;
       if (sq.aliveCount >= sq.capacity) {
@@ -467,6 +586,7 @@ export class World {
         src.units.splice(src.units.indexOf(u), 1);
         t.units.push(u);
         u.squad = t;
+        this.boostForFollow(u);
         this.setTarget(u, null);
         moved++;
       }
@@ -549,7 +669,7 @@ export class World {
       target.chargeReady = false;
       target.moveTime = 0;
     }
-    target.hp -= r.damage;
+    target.hp -= target === this.hero ? r.damage * this.damageTaken : r.damage;
     target.hitFlash = 0.12;
     if (target instanceof Hero) {
       target.sinceHit = 0;
@@ -569,7 +689,7 @@ export class World {
       multiplier: r.multiplier,
       charge: charging && (attacker.stats.chargeMultiplier ?? 1) > 1,
     });
-    if (target.hp <= 0) this.kill(target);
+    if (target.hp <= 0) this.kill(target, attacker);
   }
 
   shoot(from: Unit, target: Unit): void {
@@ -577,11 +697,14 @@ export class World {
     this.events.push({ type: 'shoot', x: from.x, y: from.y });
   }
 
-  private kill(u: Unit): void {
+  private kill(u: Unit, by?: Unit): void {
     u.dead = true;
     u.hp = 0;
     this.setTarget(u, null);
-    if (u.side === 'enemy') this.kills++;
+    if (u.side === 'enemy') {
+      this.kills++;
+      if (by) this.gainXpFor(u, by);
+    }
     this.events.push({ type: 'death', x: u.x, y: u.y, side: u.side, kind: u.kind });
     if (u.squad && u.squad.aliveCount === 0) this.events.push({ type: 'squadWiped', squad: u.squad });
   }
