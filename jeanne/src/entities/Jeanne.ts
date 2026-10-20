@@ -7,6 +7,8 @@ export class Jeanne extends Unit {
   sinceHit = 0;
   /** HP が少ないことを知らせたか（回復したら、また知らせる） */
   warned = false;
+  /** 戦場をはなれている（イベントで手当てに下がっているあいだ） */
+  absent = false;
 
   constructor(id: number, stats: UnitStats, x: number, y: number) {
     super(id, 'jeanne', 'ally', stats, x, y, null, 0);

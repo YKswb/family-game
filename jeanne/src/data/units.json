@@ -69,6 +69,16 @@
       "speed": 85,
       "radius": 14
     },
+    "captain": {
+      "name": "隊長",
+      "short": "長",
+      "hp": 30,
+      "attack": 3,
+      "interval": 0.8,
+      "reach": 14,
+      "speed": 110,
+      "radius": 12
+    },
     "jeanne": {
       "name": "ジャンヌ",
       "short": "ジャンヌ",
@@ -140,6 +150,7 @@
     "headingTurnRate": 5,
     "patrolSpeed": 50,
     "waitingReviveSeconds": 6,
+    "retreatRatio": 0.3,
     "jeanne": {
       "followBehind": 40,
       "engageRadius": 70,

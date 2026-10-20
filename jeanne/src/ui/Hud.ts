@@ -28,8 +28,15 @@ export class Hud {
 
   /** ジャンヌの行のぶん、下の行をずらす量 */
   private readonly dy: number;
+  /** ジャンヌが戦場をはなれているときに、バーの代わりに出す文字 */
+  private readonly jeanneAway: Phaser.GameObjects.Text;
 
-  constructor(scene: Phaser.Scene, withJeanne: boolean) {
+  /** objective：大将のいないステージで、最後の行に出す目的 */
+  constructor(
+    scene: Phaser.Scene,
+    withJeanne: boolean,
+    private readonly objective = '',
+  ) {
     const dy = (this.dy = withJeanne ? JEANNE_ROW : 0);
     this.gfx = scene.add.graphics().setDepth(800);
     this.name = scene.add.text(30, 36, TEXT.heroName, textStyle(26, '#ffd04a')).setOrigin(0, 0.5).setDepth(801);
@@ -38,10 +45,11 @@ export class Hud {
     this.squads = scene.add.text(30, 116 + dy, '', textStyle(22)).setOrigin(0, 0.5).setDepth(801);
     this.counts = scene.add.text(30, 154 + dy, '', textStyle(20, '#e8e0cc')).setOrigin(0, 0.5).setDepth(801);
     this.guards = scene.add.text(30, 190 + dy, '', textStyle(22, '#ffd84d')).setOrigin(0, 0.5).setDepth(801);
+    this.jeanneAway = scene.add.text(252, 74, TEXT.jeanneAway, textStyle(20, '#ffe9f2')).setOrigin(0.5).setDepth(802).setVisible(false);
   }
 
   get objects(): Phaser.GameObjects.GameObject[] {
-    return [this.gfx, this.name, this.jeanne, this.order, this.squads, this.counts, this.guards];
+    return [this.gfx, this.name, this.jeanne, this.jeanneAway, this.order, this.squads, this.counts, this.guards];
   }
 
   update(w: World): void {
@@ -49,9 +57,10 @@ export class Hud {
     const g = this.gfx;
     g.clear();
     g.fillStyle(0x000000, 0.38);
-    // 大将がいるステージでは、残りの護衛の数を1行足す
+    // 大将がいるステージでは残りの護衛の数を、いないステージでは目的を、1行足す
     const hasGeneral = !!w.general;
-    g.fillRoundedRect(14, 12, 360, (hasGeneral ? 200 : 166) + this.dy, 18);
+    const lastLine = hasGeneral || !!this.objective;
+    g.fillRoundedRect(14, 12, 360, (lastLine ? 200 : 166) + this.dy, 18);
     // HPバー
     const bx = 150;
     const bw = 204;
@@ -68,7 +77,9 @@ export class Hud {
     if (xr > 0) g.fillRoundedRect(bx, 50, Math.max(4, bw * xr), 6, 3);
     // ジャンヌのHPバー（少ないときは赤）
     const j = w.jeanne;
-    if (j) {
+    const away = !!j && j.absent && !j.dead;
+    this.jeanneAway.setVisible(away);
+    if (j && !away) {
       g.fillStyle(0xffffff, 0.25);
       g.fillRoundedRect(bx, 66, bw, 16, 8);
       const jr = Math.max(0, j.hp / j.maxHp);
@@ -89,10 +100,12 @@ export class Hud {
 
     const s = Math.floor(w.time);
     this.counts.setText(`${TEXT.enemyLabel} ${w.countAlive('enemy')}　${TEXT.time} ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
-    this.guards.setVisible(hasGeneral);
+    this.guards.setVisible(lastLine);
     if (hasGeneral) {
       const n = w.guardsLeft();
       this.guards.setText(n > 0 ? fmt(TEXT.guardsLeft, { n }) : TEXT.guardsGone);
+    } else if (this.objective) {
+      this.guards.setText(this.objective);
     }
   }
 }

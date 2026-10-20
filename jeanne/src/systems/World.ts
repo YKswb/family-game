@@ -11,7 +11,7 @@ import { computeDamage } from './Combat';
 import { Random } from './Random';
 import { SpatialGrid } from './Spatial';
 import { EventRunner } from './Events';
-import { Terrain, type Rect } from './Terrain';
+import { Terrain, type Gate, type Rect } from './Terrain';
 import { addXp, GROWTH, heroStats, leadershipAt, newProgress, squadBonus, type DifficultyData, type HeroProgress } from './Progress';
 import type { SavedSquad } from './Save';
 import type { StageEvent, StageGeneral } from '../data/stageData';
@@ -36,6 +36,8 @@ export interface SquadSpec {
   alertRadius?: number;
   /** 最初から警戒している */
   alert?: boolean;
+  /** 隊長（部隊にひとり加わる） */
+  leader?: { name: string; hp?: number; attack?: number };
 }
 
 export interface WorldConfig {
@@ -49,9 +51,12 @@ export interface WorldConfig {
   squads: SquadSpec[];
   /** 通れない円（森など） */
   obstacles?: { x: number; y: number; r: number }[];
-  /** 通れない四角（川・壁）と、その上を通れる四角（橋・門） */
+  /** 通れない四角（川・壁）と、その上を通れる四角（橋）、門（閉じていると通れない） */
   blockers?: Rect[];
   passages?: Rect[];
+  gates?: Gate[];
+  /** 敵の部隊が、人数が減ると大将の方へ下がる */
+  enemyRetreat?: boolean;
   /** 敵の大将（護衛が全滅するまで無敵） */
   general?: StageGeneral;
   /** ステージのイベント。あるときはイベントの「勝利」でだけクリアになる */
@@ -87,7 +92,12 @@ export type WorldEvent =
   | { type: 'dialog'; key: string }
   | { type: 'guarded'; x: number; y: number }
   | { type: 'levelUp'; level: number }
-  | { type: 'jeanneDanger' };
+  | { type: 'jeanneDanger' }
+  | { type: 'jeanneLeft'; x: number; y: number }
+  | { type: 'jeanneBack'; x: number; y: number }
+  | { type: 'rally' }
+  | { type: 'gateOpened'; id: string }
+  | { type: 'banner'; text: string };
 
 export interface Arrow {
   x: number;
@@ -137,6 +147,11 @@ export class World {
   private readonly enemyCountMul: number;
   readonly reviveEnabled: boolean;
   private readonly reviveSeconds: number;
+  /** 敵の部隊が、人数が減ると大将の方へ下がる */
+  readonly enemyRetreat: boolean;
+  /** 味方が奮い立っている残りの秒数と、攻撃の上がり方 */
+  rallyTime = 0;
+  rallyBonus = 0;
   arrows: Arrow[] = [];
   /** このフレームで起きたこと（描画側が効果を出すのに使う） */
   readonly events: WorldEvent[] = [];
@@ -167,7 +182,8 @@ export class World {
     this.width = cfg.width;
     this.height = cfg.height;
     this.obstacles = cfg.obstacles ?? [];
-    this.terrain = new Terrain(cfg.blockers, cfg.passages);
+    this.terrain = new Terrain(cfg.blockers, cfg.passages, cfg.gates);
+    this.enemyRetreat = !!cfg.enemyRetreat;
     this.script = cfg.events ? new EventRunner(cfg.events) : null;
     this.rng = new Random(cfg.seed ?? 1);
     this.grid = new SpatialGrid<Unit>(cfg.width, cfg.height, this.data.ai.gridCell);
@@ -224,6 +240,17 @@ export class World {
     sq.alertRadius = spec.alertRadius ?? null;
     sq.alert = !!spec.alert;
     const stats = this.data.kinds[spec.kind];
+    // 隊長：部隊にひとり加わる。部隊の兵種より遅いと置いていかれるので、速さは部隊に合わせる
+    if (spec.leader) {
+      const cap = this.data.kinds.captain;
+      const ls = { ...cap, hp: spec.leader.hp ?? cap.hp, attack: spec.leader.attack ?? cap.attack, speed: Math.max(cap.speed, stats.speed) };
+      const u = new Unit(this.nextId++, 'captain', spec.side, ls, spec.x, spec.y, sq, this.rng.next());
+      if (spec.side === 'enemy') u.maxHp = u.hp = u.hp * this.enemyHpMul;
+      if (spec.mode === 'follow') this.boostForFollow(u);
+      sq.units.push(u);
+      this.units.push(u);
+      sq.leaderName = spec.leader.name;
+    }
     for (let i = 0; i < count; i++) {
       const u = new Unit(this.nextId++, spec.kind, spec.side, stats, spec.x, spec.y, sq, this.rng.next());
       u.speed *= this.rng.range(0.93, 1.07);
@@ -249,6 +276,7 @@ export class World {
     this.updateHero(dt);
     this.updateJeanne(dt);
     this.recallTime = Math.max(0, this.recallTime - dt);
+    this.rallyTime = Math.max(0, this.rallyTime - dt);
     this.returnWipedSquads();
     this.updateRecruit();
     this.reviveWaiting(dt);
@@ -266,7 +294,12 @@ export class World {
   }
 
   *aliveUnits(): Iterable<Unit> {
-    for (const u of this.units) if (!u.dead) yield u;
+    for (const u of this.units) if (this.present(u)) yield u;
+  }
+
+  /** 戦場にいるか（倒れておらず、ジャンヌなら戦場をはなれていない） */
+  present(u: Unit): boolean {
+    return !u.dead && !(u === this.jeanne && this.jeanne.absent);
   }
 
   countAlive(side: Side, includeHero = false): number {
@@ -287,12 +320,15 @@ export class World {
     // self（近接）を渡したときは、すでに斬りかかる人数が上限に達した相手を避ける。
     // 上限内の相手が見つからなければ、上限を無視して一番近い相手にする
     const limitFor = self && !self.isRanged ? self : null;
+    // 閉じた門の向こうの敵は、近接の兵士は狙わない（弓は壁ごしに射てる）
+    const checkReach = !!limitFor && this.terrain.hasClosedGate;
     let best: Unit | null = null;
     let bestD = radius;
     let any: Unit | null = null;
     let anyD = radius;
     this.grid.forEachNear(x, y, radius + 20, (o) => {
       if (o.side === side || !this.isTargetable(o)) return;
+      if (checkReach && !this.terrain.canReach(x, y, o.x, o.y)) return;
       const d = this.targetDistance(x, y, o);
       if (d < anyD) {
         anyD = d;
@@ -331,7 +367,7 @@ export class World {
    * （待機部隊は補充の拠点。戻ってきた兵士が近くの敵にすぐ倒されないように）
    */
   isTargetable(o: Unit): boolean {
-    return !o.dead && o.squad?.mode !== 'neutral' && !o.squad?.waiting;
+    return this.present(o) && o.squad?.mode !== 'neutral' && !o.squad?.waiting;
   }
 
   /** 旗の部隊・待機の部隊の兵士（休んでいる仲間）か */
@@ -347,7 +383,7 @@ export class World {
   /** u がジャンヌのまわりにいて、攻撃が上がるか（ジャンヌ本人は除く） */
   inJeanneAura(u: Unit): boolean {
     const j = this.jeanne;
-    if (!j || j.dead || u === j || u.side !== 'ally') return false;
+    if (!j || !this.present(j) || u === j || u.side !== 'ally') return false;
     return dist(u.x, u.y, j.x, j.y) <= (j.stats.auraRadius ?? 0);
   }
 
@@ -359,7 +395,7 @@ export class World {
    */
   private gainXpFor(foe: Unit, by: Unit): void {
     const per = GROWTH.xp.perKill;
-    const base = foe.kind === 'general' ? per.general : per.soldier;
+    const base = foe.kind === 'general' ? per.general : foe.kind === 'captain' ? per.captain : per.soldier;
     let gain = 0;
     if (by === this.hero) gain = base;
     else if (by === this.jeanne || (by.side === 'ally' && by.squad?.mode === 'follow')) gain = base * GROWTH.xp.squadKillRatio;
@@ -667,6 +703,8 @@ export class World {
       if (f > allowed) {
         u.x -= this.headX * (f - allowed);
         u.y -= this.headY * (f - allowed);
+        // 下げた先が川や壁の中なら、通れる場所へ戻す
+        this.terrain.pushOut(u);
       }
     }
   }
@@ -683,8 +721,10 @@ export class World {
     }
     const charging = attacker.chargeReady;
     // ジャンヌのまわりの味方は攻撃が上がる
-    const aura = this.inJeanneAura(attacker) ? 1 + (this.jeanne!.stats.auraBonus ?? 0) : 1;
-    const r = computeDamage(this.data, attacker.kind, target.kind, { attack: attacker.attack * aura, charging });
+    // 味方が奮い立っているあいだも攻撃が上がる
+    let boost = this.inJeanneAura(attacker) ? 1 + (this.jeanne!.stats.auraBonus ?? 0) : 1;
+    if (attacker.side === 'ally' && this.rallyTime > 0) boost *= 1 + this.rallyBonus;
+    const r = computeDamage(this.data, attacker.kind, target.kind, { attack: attacker.attack * boost, charging });
     attacker.chargeReady = false;
     attacker.moveTime = 0;
     if (attacker.stats.stopsCharge) {
@@ -785,7 +825,7 @@ export class World {
   /** ジャンヌを動かし、HP が少なくなったら一度だけ知らせる（回復したら、また知らせる） */
   private updateJeanne(dt: number): void {
     const j = this.jeanne;
-    if (!j || j.dead) return;
+    if (!j || !this.present(j)) return;
     updateJeanne(this, j, dt);
     const low = j.hp < j.maxHp * this.data.ai.jeanne.lowHpRatio;
     if (low && !j.warned) this.events.push({ type: 'jeanneDanger' });
@@ -793,13 +833,48 @@ export class World {
     else if (j.hp >= j.maxHp * 0.7) j.warned = false;
   }
 
+  /** ジャンヌが戦場をはなれる（矢を受けて手当てに下がるなど）。そのあいだは狙われず、負けにもならない */
+  jeanneLeave(): void {
+    const j = this.jeanne;
+    if (!j || j.dead || j.absent) return;
+    j.absent = true;
+    this.setTarget(j, null);
+    for (const u of this.units) if (u.target === j) this.setTarget(u, null);
+    this.events.push({ type: 'jeanneLeft', x: j.x, y: j.y });
+  }
+
+  /** ジャンヌが戻ってくる（ジャンの後ろに、HP は満タンで） */
+  jeanneReturn(): void {
+    const j = this.jeanne;
+    if (!j || j.dead || !j.absent) return;
+    j.absent = false;
+    j.hp = j.maxHp;
+    j.warned = false;
+    j.x = this.hero.x - this.headX * this.data.ai.jeanne.followBehind;
+    j.y = this.hero.y - this.headY * this.data.ai.jeanne.followBehind;
+    this.terrain.pushOut(j);
+    this.events.push({ type: 'jeanneBack', x: j.x, y: j.y });
+  }
+
+  /** 味方が奮い立つ：seconds 秒のあいだ、味方全員の攻撃が bonus だけ上がる */
+  rally(seconds: number, bonus: number): void {
+    this.rallyTime = seconds;
+    this.rallyBonus = bonus;
+    this.events.push({ type: 'rally' });
+  }
+
+  /** 門を開く */
+  openGate(id: string): void {
+    if (this.terrain.openGate(id)) this.events.push({ type: 'gateOpened', id });
+  }
+
   /** 重なった兵士どうしを押し広げ、場外に出ないようにする */
   private separate(): void {
     this.grid.rebuild(this.aliveUnits());
     for (const a of this.units) {
-      if (a.dead) continue;
+      if (!this.present(a)) continue;
       this.grid.forEachNear(a.x, a.y, 30, (b) => {
-        if (b.id <= a.id || b.dead) return;
+        if (b.id <= a.id || !this.present(b)) return;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         const m = a.radius + b.radius;
@@ -817,7 +892,7 @@ export class World {
       });
     }
     for (const u of this.units) {
-      if (u.dead) continue;
+      if (!this.present(u)) continue;
       for (const o of this.obstacles) {
         const dx = u.x - o.x;
         const dy = u.y - o.y;

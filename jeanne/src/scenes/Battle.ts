@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SOLDIER_KINDS, UNIT_DATA, type SoldierKind } from '../data/unitData';
 import { STAGES } from '../data/stageData';
-import { drawArrow, drawFlag, drawUnit } from '../entities/UnitView';
+import { drawArrow, drawFlag, drawGate, drawGoal, drawUnit } from '../entities/UnitView';
 import type { Unit } from '../entities/Unit';
 import { ARENA, arenaConfig, practiceConfig } from '../systems/Arena';
 import { Random } from '../systems/Random';
@@ -140,13 +140,14 @@ export class BattleScene extends Phaser.Scene {
     this.unitGfx = this.toWorld(this.add.graphics());
     this.fxGfx = this.toWorld(this.add.graphics());
 
-    this.hud = new Hud(this, !!this.world.jeanne);
+    this.hud = new Hud(this, !!this.world.jeanne, this.mode === 'stage' ? (STAGES[this.stageId].stage.objective ?? '') : '');
     this.toUi(...this.hud.objects);
     this.joystick = new Joystick(this);
     this.toUi(this.joystick.gfx);
     if (this.mode !== 'duel') {
       const w = 260;
-      this.minimap = new Minimap(this, VIEW_W - 24 - w, 22, w, this.world);
+      const st = this.mode === 'stage' ? STAGES[this.stageId].stage : null;
+      this.minimap = new Minimap(this, VIEW_W - 24 - w, 22, w, this.world, { walls: st?.terrain.walls, goal: st?.goal });
       this.toUi(this.minimap.gfx);
     } else {
       this.createPicker();
@@ -237,9 +238,13 @@ export class BattleScene extends Phaser.Scene {
     const y0 = v.y - 60;
     const x1 = v.x + v.w + 60;
     const y1 = v.y + v.h + 120;
+    // 門（開くと変わるので、地面の絵には入れずに毎フレーム描く）と目的地
+    for (const gt of w.terrain.gates) drawGate(g, gt.rect, gt.open);
+    const goal = this.mode === 'stage' ? STAGES[this.stageId].stage.goal : undefined;
+    if (goal) drawGoal(g, goal, w.time);
     const alive: Unit[] = [];
     for (const u of w.units) {
-      if (u.dead) continue;
+      if (!w.present(u)) continue;
       if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
       alive.push(u);
     }
@@ -264,7 +269,9 @@ export class BattleScene extends Phaser.Scene {
           const label = this.labelFor(key);
           shown.add(key);
           const c = centerOf(g.units);
-          setLabel(label, `${UNIT_DATA.kinds[g.kind].short}${g.units.length}`, '#bcd6ff');
+          const n = g.units.filter((u) => u.kind !== 'captain').length;
+          const lead = sq.leaderName && g.units.some((u) => u.kind === 'captain') ? `${sq.leaderName} ` : '';
+          setLabel(label, `${lead}${UNIT_DATA.kinds[g.kind].short}${n}`, '#bcd6ff');
           label.setPosition(c.x, c.y - 40);
         }
         continue;
@@ -287,6 +294,11 @@ export class BattleScene extends Phaser.Scene {
         label.setPosition(c.x, c.y - 40);
       } else if (w.isGuardSquad(sq)) {
         setLabel(label, fmt(TEXT.guardLabel, { comp: compositionText(sq) }), '#ffcc1f');
+        label.setPosition(c.x, c.y - 40);
+      } else if (sq.leaderName) {
+        // 隊長のいる部隊（ラ・イール隊など）は名前を出す。味方NPCは水色
+        setLabel(label, `${sq.leaderName}
+${compositionText(sq)}`, sq.side === 'ally' ? '#9fe8ff' : '#ffc4bd');
         label.setPosition(c.x, c.y - 40);
       } else {
         setLabel(label, compositionText(sq), sq.side === 'ally' ? '#bcd6ff' : '#ffc4bd');
@@ -390,6 +402,22 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'jeanneDanger':
         this.showBanner(TEXT.jeanneDanger, '#ff9ec4');
+        break;
+      case 'jeanneLeft':
+        this.burst(e.x, e.y - 20, 0xff9ec4, 16, 160, 4);
+        break;
+      case 'jeanneBack':
+        this.burst(e.x, e.y - 20, 0xffe066, 30, 240, 5);
+        break;
+      case 'rally':
+        this.showBanner(TEXT.rally, '#ffe066');
+        for (const u of this.world.followingSquads().flatMap((s) => s.alive)) this.burst(u.x, u.y - 16, 0xffe066, 2, 90, 3);
+        break;
+      case 'gateOpened':
+        this.showBanner(TEXT.gateOpened, '#ffe066');
+        break;
+      case 'banner':
+        this.showBanner(e.text, '#ffffff', 32);
         break;
       case 'reinforce': {
         this.showBanner(fmt(TEXT.reinforced, { n: e.count }), '#ffd84d');

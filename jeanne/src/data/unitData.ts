@@ -2,7 +2,7 @@ import raw from './units.json';
 
 /** 三すくみに入る兵種と弓兵（仲間や敵の部隊になる兵種） */
 export type SoldierKind = 'sword' | 'spear' | 'cavalry' | 'archer';
-export type UnitKind = SoldierKind | 'hero' | 'general' | 'jeanne';
+export type UnitKind = SoldierKind | 'hero' | 'general' | 'jeanne' | 'captain';
 
 export type FormationRow = 'front' | 'middle' | 'back';
 
@@ -102,6 +102,8 @@ export interface UnitData {
     patrolSpeed: number;
     /** 待機している部隊に、兵士が1人戻ってくるまでの秒数 */
     waitingReviveSeconds: number;
+    /** 撤退するステージで、敵の部隊がこの割合まで減ると大将の方へ下がる */
+    retreatRatio: number;
     /** ジャンヌの動き */
     jeanne: {
       /** ジャンのこれだけ後ろを付いて歩く */

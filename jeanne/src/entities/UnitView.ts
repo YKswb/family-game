@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import type { Rect } from '../data/stageData';
 import type { Arrow } from '../systems/World';
 import type { Unit } from './Unit';
 
@@ -44,6 +45,9 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
   const isHero = u.kind === 'hero';
   const isGen = u.kind === 'general';
   const isJeanne = u.kind === 'jeanne';
+  /** 隊長（ラ・イールなど）。騎馬の部隊の隊長は馬に乗る */
+  const isCap = u.kind === 'captain';
+  const mounted = u.kind === 'cavalry' || (isCap && u.squad?.kind === 'cavalry');
   const flash = u.hitFlash > 0;
   const team =
     u.squad?.mode === 'neutral' ? COLOR.neutral : u.squad?.waiting ? COLOR.resting : u.side === 'ally' ? COLOR.ally : COLOR.enemy;
@@ -61,7 +65,7 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
   }
   g.scaleCanvas(u.face, 1);
 
-  if (u.kind === 'cavalry') {
+  if (mounted) {
     g.fillStyle(flash ? COLOR.flash : COLOR.horse, 1);
     g.fillEllipse(0, -8 - bob, 32, 18);
     g.fillRoundedRect(8, -20 - bob, 8, 12, 3);
@@ -71,10 +75,11 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
     g.fillCircle(0, -20 - bob, 7);
     g.fillStyle(COLOR.skin, 1);
     g.fillCircle(0, -30 - bob, 5);
-    g.lineStyle(2, COLOR.steel, 1);
+    if (isCap) drawPlume(g, 0, -36 - bob, u.side === 'ally');
+    g.lineStyle(isCap ? 3 : 2, COLOR.steel, 1);
     g.lineBetween(6, -22 - bob, 18, -34 - bob - u.swing * 6);
   } else {
-    const hh = isGen ? 1.5 : isHero ? 1.25 : isJeanne ? 1.15 : 1;
+    const hh = isGen ? 1.5 : isHero ? 1.25 : isJeanne || isCap ? 1.15 : 1;
     const top = -9 * hh - r * 1.5 - bob;
     const headY = top - 7;
     g.fillStyle(COLOR.legs, 1);
@@ -89,6 +94,10 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
       g.fillTriangle(-7, top - 30, -31, top - 23 + wave, -7, top - 14);
       g.fillStyle(COLOR.gold, 1);
       g.fillCircle(-14, top - 22 + wave / 2, 2.5);
+    }
+    if (isCap) {
+      g.fillStyle(u.side === 'ally' ? 0x1d4a94 : 0x8a2a20, 1);
+      g.fillTriangle(-9, top + 2, -16, -6 - bob, -4, -10 - bob);
     }
     if (isHero) {
       g.fillStyle(COLOR.cape, 1);
@@ -105,6 +114,7 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
       g.fillStyle(0xd9342b, 1);
       g.fillEllipse(0, headY - 14, 6, 14);
     }
+    if (isCap) drawPlume(g, 0, headY - 6, u.side === 'ally');
     if (isJeanne) {
       // 肩までの髪と、胸の金の印
       g.fillStyle(COLOR.hair, 1);
@@ -140,7 +150,7 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
       g.save();
       g.translateCanvas(r * 0.8, -14 - bob);
       g.rotateCanvas(u.swing > 0 ? -1.6 + (1 - u.swing) * 2.4 : -0.4);
-      g.lineStyle(isGen || isHero || isJeanne ? 3 : 2, isGen ? COLOR.gold : COLOR.steel, 1);
+      g.lineStyle(isGen || isHero || isJeanne || isCap ? 3 : 2, isGen ? COLOR.gold : COLOR.steel, 1);
       g.lineBetween(0, 0, 0, -16 * hh);
       g.restore();
     }
@@ -163,6 +173,49 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
     g.fillStyle(isGen || low ? COLOR.hpLow : isJeanne ? COLOR.hpJeanne : COLOR.hpHero, 1);
     g.fillRoundedRect(u.x - w / 2, y, Math.max(3, (w * u.hp) / u.maxHp), 6, 3);
   }
+}
+
+/** 隊長のかぶとの羽根（味方は白、敵は赤） */
+function drawPlume(g: Phaser.GameObjects.Graphics, x: number, y: number, ally: boolean): void {
+  g.fillStyle(0x4a4a55, 1);
+  g.fillRoundedRect(x - 6.5, y - 1, 13, 6, 3);
+  g.fillStyle(ally ? 0xffffff : 0xd9342b, 1);
+  g.fillEllipse(x - 2, y - 5, 5, 11);
+}
+
+/** 門。閉じているときは木の扉、開いているときは石の通り道 */
+export function drawGate(g: Phaser.GameObjects.Graphics, r: Rect, open: boolean): void {
+  if (open) {
+    g.fillStyle(0xb7ab92, 1);
+    g.fillRect(r.x, r.y, r.w, r.h);
+    g.lineStyle(2, 0x8f8470, 1);
+    for (let y = r.y + 10; y < r.y + r.h; y += 14) g.lineBetween(r.x, y, r.x + r.w, y);
+    return;
+  }
+  g.fillStyle(0x7a4e2b, 1);
+  g.fillRect(r.x, r.y, r.w, r.h);
+  g.lineStyle(2, 0x4f3119, 1);
+  const vertical = r.h > r.w;
+  if (vertical) for (let y = r.y + 12; y < r.y + r.h; y += 14) g.lineBetween(r.x, y, r.x + r.w, y);
+  else for (let x = r.x + 12; x < r.x + r.w; x += 14) g.lineBetween(x, r.y, x, r.y + r.h);
+  // 鉄の帯
+  g.fillStyle(0x3a3a40, 1);
+  if (vertical) {
+    g.fillRect(r.x + r.w * 0.25 - 2, r.y, 4, r.h);
+    g.fillRect(r.x + r.w * 0.75 - 2, r.y, 4, r.h);
+  } else {
+    g.fillRect(r.x, r.y + r.h * 0.25 - 2, r.w, 4);
+    g.fillRect(r.x, r.y + r.h * 0.75 - 2, r.w, 4);
+  }
+}
+
+/** 目的地。地面に金色の輪がゆっくり光る */
+export function drawGoal(g: Phaser.GameObjects.Graphics, r: Rect, time: number): void {
+  const a = 0.35 + 0.25 * Math.sin(time * 3);
+  g.fillStyle(0xffe066, a * 0.35);
+  g.fillEllipse(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h);
+  g.lineStyle(4, 0xffe066, a + 0.3);
+  g.strokeEllipse(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h);
 }
 
 export function drawArrow(g: Phaser.GameObjects.Graphics, a: Arrow): void {

@@ -175,7 +175,7 @@ export interface StageStats {
  * ステージを通すボット。旗の部隊を集め、護衛から順に敵の部隊を倒し、最後に大将を倒す。
  * 川は橋を経由して渡る（ジャンの行き先にも地形の経路を使う）
  */
-export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats {
+export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60, goal?: { x: number; y: number; w: number; h: number }): StageStats {
   let refillsDone = 0;
   let followingAtBoss = -1;
   const startX = w.hero.x;
@@ -190,7 +190,7 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
     const h = w.hero;
     const j = w.jeanne;
     // ジャンかジャンヌの HP が少なくなったら、笛で仲間を呼び戻して下がる
-    const jRatio = j ? j.hp / j.maxHp : 1;
+    const jRatio = j && w.present(j) ? j.hp / j.maxHp : 1;
     jeanneMin = Math.min(jeanneMin, jRatio);
     if (!retreating && (h.hp < h.maxHp * 0.35 || jRatio < 0.35)) {
       retreating = true;
@@ -204,7 +204,12 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
     let stopAt = 20;
     const neutral = nearestSquad(w, (s) => s.mode === 'neutral');
     const guarded = w.isGeneralGuarded();
-    const foeSquad = nearestSquad(w, (s) => s.side === 'enemy' && (!guarded || s !== w.generalSquad));
+    // 閉じた門の向こうの部隊は、門が開くまで目指さない
+    const reachable = (s: World['squads'][number]) => {
+      const c = s.center();
+      return w.terrain.canReach(h.x, h.y, c.x, c.y);
+    };
+    const foeSquad = nearestSquad(w, (s) => s.side === 'enemy' && (!guarded || s !== w.generalSquad) && reachable(s));
     // 旗の部隊と敵の部隊のうち、近い方から順に進む（敵の中を突っ切って旗を取りに行かない）
     const distTo = (s: typeof neutral) => (s ? Math.hypot(s.center().x - h.x, s.center().y - h.y) : Infinity);
     const recruitFirst = neutral !== null && distTo(neutral) <= distTo(foeSquad);
@@ -224,7 +229,7 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
         const a = (i / 8) * Math.PI * 2;
         const cx = Math.min(w.width - 80, Math.max(80, h.x + Math.cos(a) * 350));
         const cy = Math.min(w.height - 80, Math.max(80, h.y + Math.sin(a) * 350));
-        if (w.terrain.isBlocked(cx, cy, 20)) continue;
+        if (w.terrain.isBlocked(cx, cy, 20) || !w.terrain.canReach(h.x, h.y, cx, cy)) continue;
         let minD = Infinity;
         for (const f of foes) minD = Math.min(minD, Math.hypot(f.x - cx, f.y - cy));
         if (minD > bestScore) {
@@ -245,6 +250,10 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
       ty = target?.y ?? c.y;
       stopAt = target ? h.radius + target.radius : 40;
       w.setOrder(Math.hypot(c.x - h.x, c.y - h.y) < 500 ? 'charge' : 'gather');
+    } else if (goal) {
+      // 敵がいなくなったら、ジャンヌを目的地へ
+      tx = goal.x + goal.w / 2;
+      ty = goal.y + goal.h / 2;
     }
     const p = w.terrain.waypoint(h.x, h.y, tx, ty);
     const dx = p.x - h.x;

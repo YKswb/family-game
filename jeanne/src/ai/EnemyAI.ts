@@ -18,10 +18,49 @@ export function updateHoldSquad(w: World, sq: Squad, dt: number): void {
     return;
   }
   const c = sq.center();
+  if (updateRetreat(w, sq, c)) {
+    layoutSquad(sq, sq.postX, sq.postY, sq.dirX, sq.dirY, ai.formationSpacing, ai.formationColumns);
+    return;
+  }
   const radius = sq.alert ? ai.enemyChaseRadius : (sq.alertRadius ?? ai.enemyAlertRadius);
   sq.alert = w.nearestFoe(sq.side, c.x, c.y, radius) !== null;
-  if (!sq.alert) followRoute(sq, dt);
+  // 気づいていても、だれも戦っていない（相手が門の向こうなどで届かない）ときは、ルートを進み続ける
+  if (!sq.alert || !sq.units.some((u) => !u.dead && u.target)) followRoute(sq, dt);
   layoutSquad(sq, sq.postX, sq.postY, sq.dirX, sq.dirY, ai.formationSpacing, ai.formationColumns);
+}
+
+/**
+ * 撤退：撤退のあるステージで、敵の部隊が最初の人数の3割まで減ったら、戦いをやめて大将のそばへ下がる。
+ * 下がり終えたら、そこで大将を守る（もう一度は下がらない）。下がっているあいだは true
+ */
+function updateRetreat(w: World, sq: Squad, c: { x: number; y: number }): boolean {
+  const gen = w.general;
+  if (!w.enemyRetreat || sq.side !== 'enemy' || !gen || gen.dead || sq === w.generalSquad) return false;
+  // 下がる先（大将のところ）へ行けないとき（門が閉じているなど）は、下がらずに戦い続ける
+  if (
+    !sq.retreating &&
+    !sq.retreated &&
+    sq.aliveCount > 0 &&
+    sq.aliveCount <= sq.capacity * w.data.ai.retreatRatio &&
+    w.terrain.canReach(c.x, c.y, gen.x, gen.y)
+  ) {
+    sq.retreating = true;
+    sq.alert = false;
+    sq.route = null;
+    // 大将のまわりの、ほかの部隊と重なりにくい場所へ
+    const a = w.rng.range(0, Math.PI * 2);
+    const p = { x: gen.x + Math.cos(a) * 110, y: gen.y + Math.sin(a) * 110, radius: 30 };
+    w.terrain.pushOut(p);
+    sq.postX = p.x;
+    sq.postY = p.y;
+  }
+  if (!sq.retreating) return false;
+  if (Math.hypot(c.x - sq.postX, c.y - sq.postY) < 60) {
+    sq.retreating = false;
+    sq.retreated = true;
+    return false;
+  }
+  return true;
 }
 
 /** 持ち場をルートの次の地点へ動かす（巡回はくり返し、進軍は最後の地点で止まる） */

@@ -3,19 +3,70 @@ import type { Rect } from '../data/stageData';
 export type { Rect };
 
 const inside = (r: Rect, x: number, y: number, m = 0) => x > r.x - m && x < r.x + r.w + m && y > r.y - m && y < r.y + r.h + m;
+/** 2つの四角が重なっているか、くっついているか */
+const touches = (a: Rect, b: Rect, m = 2) => a.x < b.x + b.w + m && a.x + a.w + m > b.x && a.y < b.y + b.h + m && a.y + a.h + m > b.y;
+
+/** 門。閉じているあいだは通れない */
+export interface Gate {
+  id: string;
+  rect: Rect;
+  open: boolean;
+}
 
 /**
- * 通れない四角（川・壁）と、その上を通れる四角（橋・門）。
- * 兵士を押し出すのと、川の向こうへ行くときに橋を経由させるのに使う
+ * 通れない四角（川・壁）と、その上を通れる四角（橋・開いた門）。
+ * 兵士を押し出すのと、川や壁の向こうへ行くときに橋や門を経由させるのに使う。
+ * くっついている川と壁はひとつながりの「さえぎり」として扱い、そのどこかにかかる橋・門を通る
  */
 export class Terrain {
+  /** 通れる四角（橋と、開いている門） */
+  readonly passages: Rect[];
+  readonly gates: Gate[];
+  /** さえぎりごとの番号（くっついている四角は同じ番号） */
+  private readonly groupOf = new Map<Rect, number>();
+
   constructor(
     readonly blockers: readonly Rect[] = [],
-    readonly passages: readonly Rect[] = [],
-  ) {}
+    passages: readonly Rect[] = [],
+    gates: readonly Gate[] = [],
+  ) {
+    this.gates = gates.map((g) => ({ ...g }));
+    this.passages = [...passages, ...this.gates.filter((g) => g.open).map((g) => g.rect)];
+    // くっついている四角を同じ番号にまとめる
+    let next = 0;
+    for (const b of blockers) {
+      if (this.groupOf.has(b)) continue;
+      const id = next++;
+      const stack = [b];
+      this.groupOf.set(b, id);
+      while (stack.length) {
+        const cur = stack.pop()!;
+        for (const o of blockers) {
+          if (!this.groupOf.has(o) && touches(cur, o)) {
+            this.groupOf.set(o, id);
+            stack.push(o);
+          }
+        }
+      }
+    }
+  }
 
   get empty(): boolean {
     return this.blockers.length === 0;
+  }
+
+  /** 閉じている門があるか */
+  get hasClosedGate(): boolean {
+    return this.gates.some((g) => !g.open);
+  }
+
+  /** 門を開く。開いたら true */
+  openGate(id: string): boolean {
+    const g = this.gates.find((x) => x.id === id);
+    if (!g || g.open) return false;
+    g.open = true;
+    this.passages.push(g.rect);
+    return true;
   }
 
   /** (x, y) が通れない場所か（margin は体の半径） */
@@ -68,24 +119,42 @@ export class Terrain {
     return null;
   }
 
+  /** 通れる四角 p がかかっている、さえぎりの四角（group のもの） */
+  private hostOf(p: Rect, group: number): Rect | null {
+    for (const b of this.blockers) if (this.groupOf.get(b) === group && touches(p, b, 0)) return b;
+    return null;
+  }
+
+  /**
+   * a から b へ行けそうか。まっすぐ行けるか、間のさえぎりに橋か開いた門があれば行ける
+   * （閉じた門の向こうの敵を、近接の兵士が狙わないようにするのに使う）
+   */
+  canReach(ax: number, ay: number, bx: number, by: number): boolean {
+    const b = this.segmentBlocked(ax, ay, bx, by);
+    if (!b) return true;
+    const group = this.groupOf.get(b);
+    return this.passages.some((p) => this.hostOf(p, group!) !== null);
+  }
+
   /**
    * a から b へ向かうとき、いま目指すべき地点。まっすぐ行けるなら b、
-   * 川などをまたぐなら、遠回りが一番少ない橋の手前 → 橋の向こう の順に目指す
+   * 川や壁をまたぐなら、遠回りが一番少ない橋・門の手前 → 向こう側 の順に目指す
    */
   waypoint(ax: number, ay: number, bx: number, by: number): { x: number; y: number } {
     if (this.empty) return { x: bx, y: by };
-    const b = this.segmentBlocked(ax, ay, bx, by);
-    if (!b) return { x: bx, y: by };
-    // 川が縦長なら左右に、横長なら上下に渡る
-    const vertical = b.h >= b.w;
-    const sideOf = (x: number, y: number) => (vertical ? Math.sign(x - (b.x + b.w / 2)) : Math.sign(y - (b.y + b.h / 2)));
-    // 出口は行き先の側の端、入口はその反対の端（橋の真ん中＝川の中心線の上にいても迷わないように）
-    const to = sideOf(bx, by);
+    const hit = this.segmentBlocked(ax, ay, bx, by);
+    if (!hit) return { x: bx, y: by };
+    const group = this.groupOf.get(hit)!;
     let best: { entry: { x: number; y: number }; exit: { x: number; y: number }; onIt: boolean } | null = null;
     let bestCost = Infinity;
     for (const p of this.passages) {
-      // この川にかかっている橋だけ
-      if (!(p.x < b.x + b.w && p.x + p.w > b.x && p.y < b.y + b.h && p.y + p.h > b.y)) continue;
+      // このさえぎりにかかっている橋・門だけ
+      const host = this.hostOf(p, group);
+      if (!host) continue;
+      // かかっている川・壁が縦長なら左右に、横長なら上下に渡る
+      const vertical = host.h >= host.w;
+      const sideOf = (x: number, y: number) => (vertical ? Math.sign(x - (host.x + host.w / 2)) : Math.sign(y - (host.y + host.h / 2)));
+      const to = sideOf(bx, by);
       const cx = p.x + p.w / 2;
       const cy = p.y + p.h / 2;
       const ends = vertical
@@ -97,6 +166,7 @@ export class Terrain {
             { x: cx, y: p.y },
             { x: cx, y: p.y + p.h },
           ];
+      // 出口は行き先の側の端、入口はその反対の端（橋の真ん中＝川の中心線の上にいても迷わないように）
       const exit = sideOf(ends[0].x, ends[0].y) === to ? ends[0] : ends[1];
       const entry = exit === ends[0] ? ends[1] : ends[0];
       const cost = Math.hypot(entry.x - ax, entry.y - ay) + Math.hypot(exit.x - entry.x, exit.y - entry.y) + Math.hypot(bx - exit.x, by - exit.y);
@@ -106,7 +176,7 @@ export class Terrain {
       }
     }
     if (!best) return { x: bx, y: by };
-    // 橋の上にいるか、橋の手前まで来たら、向こう岸へ
+    // 橋の上にいるか、橋の手前まで来たら、向こう側へ
     if (best.onIt || Math.hypot(best.entry.x - ax, best.entry.y - ay) < 24) return best.exit;
     return best.entry;
   }

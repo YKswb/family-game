@@ -13,9 +13,11 @@ export function stageConfig(stage: StageData, seed = 1): WorldConfig {
     seed,
     obstacles: t.forests,
     blockers: [...t.rivers, ...t.walls],
-    passages: [...t.bridges, ...t.gates],
+    passages: t.bridges,
+    gates: t.gates.map((g, i) => ({ id: g.id ?? `gate${i}`, rect: { x: g.x, y: g.y, w: g.w, h: g.h }, open: !g.closed })),
     squads: stage.squads,
     general: stage.general,
     events: stage.events,
+    enemyRetreat: !!stage.enemyRetreat,
   };
 }

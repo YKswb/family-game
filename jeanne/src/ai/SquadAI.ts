@@ -50,7 +50,8 @@ function engagementOf(w: World, u: Unit): Engagement {
     return { engage, leash: engage + ai.allyLeashExtra, anchorX: u.slotX, anchorY: u.slotY };
   }
   return {
-    engage: sq.alert ? ai.enemyEngageRadius : 0,
+    // 下がっているあいだは戦わない
+    engage: sq.alert && !sq.retreating ? ai.enemyEngageRadius : 0,
     leash: ai.enemyChaseRadius,
     anchorX: sq.postX,
     anchorY: sq.postY,
@@ -173,7 +174,8 @@ export function updateSoldier(w: World, u: Unit, dt: number): void {
       const k = clamp01((d - 40) / ai.catchUpDistance);
       speed = u.speed * (ai.slotSpeedMultiplier + (ai.catchUpMaxMultiplier - ai.slotSpeedMultiplier) * k);
     } else {
-      speed = sq.alert ? u.speed : u.speed * ai.returnSpeedMultiplier;
+      // 下がっている部隊は全速で
+      speed = sq.alert || sq.retreating ? u.speed : u.speed * ai.returnSpeedMultiplier;
     }
     navMove(w, u, u.slotX, u.slotY, speed, dt);
   }

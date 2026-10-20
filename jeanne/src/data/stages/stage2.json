@@ -1,0 +1,75 @@
+{
+  "id": "stage2",
+  "title": "シノンへの道",
+  "subtitle": "1429年2月　ヴォークルールから シノンへ",
+  "width": 4000,
+  "height": 2400,
+  "groundColor": "#6fb352",
+  "objective": "もくてき：ジャンヌを シノンの城へ",
+  "goal": { "x": 3680, "y": 1350, "w": 200, "h": 120 },
+  "terrain": {
+    "rivers": [{ "x": 2000, "y": 0, "w": 110, "h": 2400 }],
+    "walls": [{ "x": 3660, "y": 1150, "w": 240, "h": 175 }],
+    "bridges": [{ "x": 1970, "y": 1140, "w": 170, "h": 170 }],
+    "gates": [],
+    "forests": [
+      { "x": 800, "y": 700, "r": 160 },
+      { "x": 1500, "y": 560, "r": 140 },
+      { "x": 1420, "y": 1950, "r": 150 },
+      { "x": 650, "y": 2000, "r": 120 },
+      { "x": 2550, "y": 650, "r": 140 },
+      { "x": 2950, "y": 1950, "r": 150 },
+      { "x": 3300, "y": 650, "r": 120 },
+      { "x": 3500, "y": 2050, "r": 100 }
+    ],
+    "roads": [
+      [[300, 1250], [900, 1230], [1500, 1250], [1970, 1225], [2140, 1225], [2700, 1250], [3300, 1320], [3780, 1400]]
+    ],
+    "houses": [
+      { "x": 160, "y": 1080 }, { "x": 360, "y": 1050 }, { "x": 150, "y": 1440 }, { "x": 380, "y": 1470 }
+    ],
+    "tents": [],
+    "castles": [{ "x": 3780, "y": 1330 }]
+  },
+  "start": {
+    "hero": { "x": 300, "y": 1250, "dir": [1, 0] },
+    "jeanne": { "x": 260, "y": 1250 }
+  },
+  "squads": [
+    { "id": "flagSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 600, "y": 950 },
+    { "id": "flagArcher", "side": "ally", "mode": "neutral", "kind": "archer", "count": 10, "x": 650, "y": 1550 },
+    { "id": "flagCavalry", "side": "ally", "mode": "neutral", "kind": "cavalry", "count": 10, "x": 1050, "y": 2120 },
+    { "id": "flagSpear", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 1750, "y": 1650 },
+    { "id": "eastSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 2500, "y": 2000 },
+    { "id": "eastSpear", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 2650, "y": 380 },
+
+    { "id": "roadSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 1200, "y": 1250, "dir": [-1, 0] },
+    { "id": "forestArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 1480, "y": 830, "dir": [0, 1] },
+    { "id": "patrolSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 1000, "y": 1700, "patrol": [[1000, 1700], [1650, 1700]] },
+    { "id": "bridgeSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 2300, "y": 1170, "dir": [-1, 0] },
+    { "id": "bridgeArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 2420, "y": 1400, "dir": [-1, 0] },
+    { "id": "cavPatrol", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2750, "y": 850, "patrol": [[2750, 850], [2750, 1700]], "speed": 70 },
+    { "id": "ambushCaptain", "side": "enemy", "mode": "hold", "kind": "sword", "count": 10, "x": 3250, "y": 1300, "dir": [-1, 0], "leader": { "name": "まちぶせの隊長" } },
+    { "id": "castleSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 3450, "y": 1000, "dir": [-1, 0] },
+    { "id": "castleArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 3450, "y": 1650, "dir": [-1, 0] }
+  ],
+  "events": [
+    { "id": "start", "when": { "time": 0 }, "do": [{ "dialog": "start" }] },
+    {
+      "id": "pincer",
+      "when": { "heroIn": { "x": 1750, "y": 1000, "w": 400, "h": 450 } },
+      "do": [
+        { "dialog": "pincer" },
+        {
+          "spawn": [
+            { "id": "ambushCav", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 1400, "y": 250, "route": [[1400, 250], [1700, 900], [1850, 1180]], "speed": 110, "alertRadius": 350 },
+            { "id": "ambushSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 1300, "y": 2350, "route": [[1300, 2350], [1700, 1650], [1850, 1320]], "speed": 90, "alertRadius": 350 },
+            { "id": "laHire", "side": "ally", "mode": "hold", "kind": "cavalry", "count": 10, "x": 300, "y": 2300, "route": [[300, 2300], [1150, 1750], [1800, 1350]], "speed": 140, "alertRadius": 350, "leader": { "name": "ラ・イール", "hp": 50, "attack": 4 } }
+          ]
+        }
+      ]
+    },
+    { "id": "castle", "when": { "heroIn": { "x": 3000, "y": 800, "w": 1000, "h": 1100 } }, "do": [{ "dialog": "castle" }] },
+    { "id": "clear", "when": { "jeanneIn": { "x": 3680, "y": 1350, "w": 200, "h": 120 } }, "do": [{ "dialog": "clear" }, { "victory": true }] }
+  ]
+}

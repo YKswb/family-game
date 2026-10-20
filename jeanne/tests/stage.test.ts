@@ -33,6 +33,8 @@ describe.each(Object.keys(STAGES))('%s のデータ', (key) => {
       for (const [x, y] of [...(s.patrol ?? []), ...(s.route ?? [])]) points.push([`${s.id} のルート`, x, y]);
     }
     if (stage.general) points.push([stage.general.id, stage.general.x, stage.general.y]);
+    for (const e of stage.events) for (const a of e.do) for (const m of a.march ?? []) for (const [x, y] of m.route) points.push([`${m.squad} の進軍`, x, y]);
+    if (stage.start.jeanne) points.push(['jeanne', stage.start.jeanne.x, stage.start.jeanne.y]);
     for (const [name, x, y] of points) {
       expect(inMap(x, y), `${name} (${x}, ${y}) が地図の外`).toBe(true);
       expect(terrain.isBlocked(x, y, 20), `${name} (${x}, ${y}) が川や壁の上`).toBe(false);
@@ -50,6 +52,18 @@ describe.each(Object.keys(STAGES))('%s のデータ', (key) => {
 
   it('クリアになるイベントがある', () => {
     expect(stage.events.some((e) => e.do.some((a) => a.victory))).toBe(true);
+  });
+
+  it('イベントが指すイベント・門・部隊がある', () => {
+    const eventIds = stage.events.map((e) => e.id);
+    const gateIds = stage.terrain.gates.map((g) => g.id);
+    for (const e of stage.events) {
+      if (e.when.after) expect(eventIds).toContain(e.when.after.event);
+      for (const a of e.do) {
+        if (a.openGate) expect(gateIds).toContain(a.openGate);
+        for (const m of a.march ?? []) expect(ids).toContain(m.squad);
+      }
+    }
   });
 
   it('敵の部隊は 8〜12 隊（援軍を含む）', () => {

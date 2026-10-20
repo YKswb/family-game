@@ -8,8 +8,8 @@ import type { Side, Unit } from './Unit';
  */
 export type SquadMode = 'follow' | 'hold' | 'neutral';
 
-/** 部隊の兵種。大将はひとりだけの部隊として扱う */
-export type SquadKind = SoldierKind | 'general';
+/** 部隊の兵種。大将はひとりだけの部隊として扱う。隊長は部隊の中のひとり（captain） */
+export type SquadKind = SoldierKind | 'general' | 'captain';
 
 export class Squad {
   readonly units: Unit[] = [];
@@ -44,6 +44,12 @@ export class Squad {
   routeSpeed = 0;
   /** 索敵範囲（null なら units.json の値） */
   alertRadius: number | null = null;
+  /** 隊長の名前（ラ・イールなど。いなければ空） */
+  leaderName = '';
+  /** 人数が減って大将の方へ下がっている途中 */
+  retreating = false;
+  /** 一度下がり終えた（もう下がらない） */
+  retreated = false;
 
   constructor(
     readonly id: number,
@@ -74,24 +80,37 @@ export class Squad {
 
   /**
    * 生き残りを兵種ごとのかたまりに分ける。最初の兵種を先に、あとは SOLDIER_KINDS の順。
-   * 補充で兵種が混ざった部隊は、かたまりごとにその兵種の列へ並ぶ
+   * 補充で兵種が混ざった部隊は、かたまりごとにその兵種の列へ並ぶ。
+   * 隊長は最初のかたまりの先頭に入れる（隊長だけが残ったら隊長だけのかたまり）
    */
   groups(): { kind: SquadKind; units: Unit[] }[] {
     const byKind = new Map<SquadKind, Unit[]>();
+    const captains: Unit[] = [];
     for (const u of this.units) {
       if (u.dead) continue;
+      if (u.kind === 'captain') {
+        captains.push(u);
+        continue;
+      }
       const k = u.kind as SquadKind;
       let list = byKind.get(k);
       if (!list) byKind.set(k, (list = []));
       list.push(u);
     }
     const order: SquadKind[] = [this.kind, ...SOLDIER_KINDS.filter((k) => k !== this.kind)];
-    return order.filter((k) => byKind.has(k)).map((kind) => ({ kind, units: byKind.get(kind)! }));
+    const groups = order.filter((k) => byKind.has(k)).map((kind) => ({ kind, units: byKind.get(kind)! }));
+    if (captains.length > 0) {
+      if (groups.length > 0) groups[0].units.unshift(...captains);
+      else groups.push({ kind: this.kind, units: captains });
+    }
+    return groups;
   }
 
-  /** 生き残りの兵種ごとの人数（groups と同じ順） */
+  /** 生き残りの兵種ごとの人数（groups と同じ順。隊長は数えない） */
   composition(): { kind: SquadKind; n: number }[] {
-    return this.groups().map((g) => ({ kind: g.kind, n: g.units.length }));
+    return this.groups()
+      .map((g) => ({ kind: g.kind, n: g.units.filter((u) => u.kind !== 'captain').length }))
+      .filter((c) => c.n > 0);
   }
 
   center(): { x: number; y: number } {

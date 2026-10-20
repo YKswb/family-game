@@ -83,7 +83,7 @@ export function fieldItems(
     for (const r of terrain.rivers) items.push({ ...rectBox(r, 6), draw: (g) => drawRiver(g, r) });
     for (const w of terrain.walls) items.push({ ...rectBox(w, 2), draw: (g) => drawWall(g, w) });
     for (const b of terrain.bridges) items.push({ ...rectBox(b, 3), draw: (g) => drawBridge(g, b) });
-    for (const gt of terrain.gates) items.push({ ...rectBox(gt, 3), draw: (g) => drawBridge(g, gt) });
+    // 門は開くと見た目が変わるので、地面の絵には入れない（戦場の描画で毎フレーム描く）
   }
 
   // 家・テント・木は、下にあるものほど手前に見えるよう y の順に描く
@@ -102,6 +102,7 @@ export function fieldItems(
   if (terrain) {
     for (const h of terrain.houses) things.push({ y: h.y, item: { x0: h.x - 48, y0: h.y - 86, x1: h.x + 48, y1: h.y + 16, draw: (g) => drawHouse(g, h.x, h.y) } });
     for (const t of terrain.tents) things.push({ y: t.y, item: { x0: t.x - 46, y0: t.y - 78, x1: t.x + 46, y1: t.y + 18, draw: (g) => drawTent(g, t.x, t.y) } });
+    for (const c of terrain.castles ?? []) things.push({ y: c.y, item: { x0: c.x - 140, y0: c.y - 270, x1: c.x + 140, y1: c.y + 30, draw: (g) => drawCastle(g, c.x, c.y) } });
   }
   things.sort((a, b) => a.y - b.y);
   for (const t of things) items.push(t.item);
@@ -138,8 +139,46 @@ function drawRiver(g: Phaser.GameObjects.Graphics, r: { x: number; y: number; w:
 function drawWall(g: Phaser.GameObjects.Graphics, r: { x: number; y: number; w: number; h: number }): void {
   g.fillStyle(0x8c8c8c, 1);
   g.fillRect(r.x, r.y, r.w, r.h);
-  g.lineStyle(2, 0x6a6a6a, 1);
+  // 石積みの目地
+  g.lineStyle(1.5, 0x737373, 1);
+  const vertical = r.h > r.w;
+  const len = vertical ? r.h : r.w;
+  for (let p = 18; p < len; p += 18) {
+    if (vertical) g.lineBetween(r.x, r.y + p, r.x + r.w, r.y + p);
+    else g.lineBetween(r.x + p, r.y, r.x + p, r.y + r.h);
+  }
+  g.lineStyle(3, 0x5f5f5f, 1);
   g.strokeRect(r.x, r.y, r.w, r.h);
+}
+
+/** 城（見た目だけ）。(x, y) が正面の足もと */
+function drawCastle(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+  g.fillStyle(0x000000, 0.18);
+  g.fillEllipse(x, y + 6, 280, 40);
+  // 城壁と真ん中の塔
+  g.fillStyle(0xd8d0bd, 1);
+  g.fillRect(x - 110, y - 90, 220, 92);
+  g.fillRect(x - 40, y - 170, 80, 90);
+  // 両はしの塔
+  g.fillRect(x - 130, y - 140, 44, 142);
+  g.fillRect(x + 86, y - 140, 44, 142);
+  // 青い屋根
+  g.fillStyle(0x3f6fd8, 1);
+  g.fillTriangle(x - 136, y - 140, x - 108, y - 196, x - 80, y - 140);
+  g.fillTriangle(x + 80, y - 140, x + 108, y - 196, x + 136, y - 140);
+  g.fillTriangle(x - 48, y - 170, x, y - 230, x + 48, y - 170);
+  // 城門と窓
+  g.fillStyle(0x6b4325, 1);
+  g.fillRoundedRect(x - 22, y - 46, 44, 48, { tl: 20, tr: 20, bl: 0, br: 0 });
+  g.fillStyle(0x3b4a66, 1);
+  for (const wx of [x - 70, x + 60, x - 8]) g.fillRect(wx, wx === x - 8 ? y - 140 : y - 72, 12, 16);
+  // 旗
+  g.lineStyle(2, 0x5a3a22, 1);
+  g.lineBetween(x, y - 230, x, y - 262);
+  g.fillStyle(0x2f6fd6, 1);
+  g.fillTriangle(x, y - 262, x + 26, y - 254, x, y - 246);
+  g.fillStyle(0xffd84d, 1);
+  g.fillCircle(x + 8, y - 254, 2.5);
 }
 
 function drawBridge(g: Phaser.GameObjects.Graphics, r: { x: number; y: number; w: number; h: number }): void {
