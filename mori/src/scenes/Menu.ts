@@ -43,6 +43,7 @@ export class MenuScene extends Phaser.Scene {
     this.overlay.hide();
     this.overlay.pauseBtn.classList.add('hide');
     this.overlay.callBtn.classList.add('hide');
+    this.overlay.friendBtn.classList.add('hide');
     const theme = STAGES[0].theme;
     this.cameras.main.setOrigin(0, 0).setBackgroundColor(theme.background);
     this.tex = new Textures(this, theme, GAME_DATA.towers, GAME_DATA.enemies);
@@ -123,8 +124,13 @@ export class MenuScene extends Phaser.Scene {
     this.menus.showStages(
       this.save,
       SELECTABLE_STAGES,
-      GAME_DATA.difficulty.map((d) => d.name),
+      GAME_DATA,
       {
+        onFriend: (kind) => {
+          this.save.friend = kind;
+          this.persist();
+          this.show('stages');
+        },
         onPick: (stage) => {
           this.persist();
           this.scene.start('Battle', { stageId: stage.id, difficulty: this.save.difficulty });

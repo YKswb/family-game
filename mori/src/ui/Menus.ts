@@ -1,4 +1,4 @@
-import type { GameData, StageData, TowerKind } from '../data/gameData';
+import type { CompanionKind, GameData, StageData, TowerKind } from '../data/gameData';
 import { nextCost, unlockable } from '../systems/Home';
 import type { SaveData } from '../systems/Save';
 import { TEXT, fmt } from './Display';
@@ -17,6 +17,7 @@ export interface HomeHandlers {
 export interface StageHandlers {
   onPick(stage: StageData): void;
   onDifficulty(d: number): void;
+  onFriend(kind: CompanionKind): void;
   onBack(): void;
 }
 
@@ -110,11 +111,21 @@ export class Menus {
     this.on('#m-stages', () => h.onStages());
   }
 
-  /** ステージ選び：難易度と、ステージの★・王冠 */
-  showStages(s: SaveData, stages: StageData[], difficultyNames: string[], h: StageHandlers): void {
-    const diffs = difficultyNames
-      .map((name, i) => `<button class="dbtn ${s.difficulty === i ? 'on' : ''}" data-diff="${i}">${escape(name)}</button>`)
+  /** ステージ選び：難易度、連れていく仲間、ステージの★・王冠 */
+  showStages(s: SaveData, stages: StageData[], data: GameData, h: StageHandlers): void {
+    const diffs = data.difficulty
+      .map((d, i) => `<button class="dbtn ${s.difficulty === i ? 'on' : ''}" data-diff="${i}">${escape(d.name)}</button>`)
       .join('');
+    const kinds = data.companions.kinds;
+    const friendButtons = s.friends
+      .map((k) => `<button class="dbtn ${s.friend === k ? 'on' : ''}" data-friend="${k}">${escape(kinds[k].icon)} ${escape(kinds[k].name)}</button>`)
+      .join('');
+    const picked = s.friend ? kinds[s.friend] : null;
+    const friendRow = s.friends.length
+      ? `<div class="group" style="justify-content:center">🐾 ${escape(TEXT.friendTitle)}</div><div class="diff">${friendButtons}</div>${
+          picked ? `<p class="note" style="text-align:center">${escape(fmt(TEXT.friendDesc, { animal: picked.animal, name: picked.name, desc: picked.desc }))}</p>` : ''
+        }`
+      : '';
     let n = 0;
     const rows = stages
       .map((st) => {
@@ -130,10 +141,12 @@ export class Menus {
     this.open(`<div class="panel">
       <div class="head"><h2>🗺️ ${escape(TEXT.stages)}</h2><span class="love">${escape(fmt(TEXT.love, { n: s.love }))}</span></div>
       <div class="diff">${diffs}</div><p class="note" style="text-align:center">${escape(TEXT.crownNote)}</p>
+      ${friendRow}
       <div class="stages">${rows}</div>
       <div class="foot"><button class="btn2" id="m-back">${escape(TEXT.backHome)}</button></div>
     </div>`);
     this.on('[data-diff]', (el) => h.onDifficulty(Number(el.dataset.diff)));
+    this.on('[data-friend]', (el) => h.onFriend(el.dataset.friend as CompanionKind));
     this.on('[data-stage]', (el) => {
       const st = stages.find((x) => x.id === el.dataset.stage);
       if (st) h.onPick(st);

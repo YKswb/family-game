@@ -8,7 +8,8 @@
   "groups": [
     { "id": "keeper", "icon": "🧒", "name": "あらた" },
     { "id": "tower", "icon": "🏰", "name": "とう" },
-    { "id": "house", "icon": "🏠", "name": "おうち" }
+    { "id": "house", "icon": "🏠", "name": "おうち" },
+    { "id": "friend", "icon": "🐾", "name": "仲間" }
   ],
   "upgrades": [
     { "id": "speed", "group": "keeper", "icon": "👟", "name": "はやあし", "desc": "歩く はやさ +6%", "costs": [10, 20, 35], "stat": "speed", "add": 0.06 },
@@ -19,7 +20,9 @@
     { "id": "builder", "group": "tower", "icon": "🔨", "name": "けんちく 名人", "desc": "とうと かべが 木材 8% 安くなる", "costs": [15, 30, 50], "stat": "buildCost", "mul": 0.92 },
     { "id": "house", "group": "house", "icon": "🏠", "name": "じょうぶな おうち", "desc": "おうちの HP +4", "costs": [10, 20, 35], "stat": "houseHp", "add": 4 },
     { "id": "wall", "group": "house", "icon": "🧱", "name": "かたい かべ", "desc": "かべの HP +15%", "costs": [10, 20, 35], "stat": "wallHp", "add": 0.15 },
-    { "id": "stock", "group": "house", "icon": "🪵", "name": "たくわえ", "desc": "さいしょから 木材を 5 持っている", "costs": [8, 16, 28], "stat": "startWood", "add": 5 }
+    { "id": "stock", "group": "house", "icon": "🪵", "name": "たくわえ", "desc": "さいしょから 木材を 5 持っている", "costs": [8, 16, 28], "stat": "startWood", "add": 5 },
+    { "id": "friendPower", "group": "friend", "icon": "💪", "name": "仲間の 力", "desc": "仲間の こうげき +15%", "costs": [12, 24, 40], "stat": "friendDamage", "add": 0.15 },
+    { "id": "friendSpeed", "group": "friend", "icon": "💨", "name": "仲間の 足", "desc": "仲間の 動く はやさ と こうげきの はやさ +10%", "costs": [10, 20, 35], "stat": "friendSpeed", "add": 0.1 }
   ],
   "unlocks": [
     { "tower": "lightning", "cost": 40 },

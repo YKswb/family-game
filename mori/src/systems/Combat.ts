@@ -4,7 +4,7 @@ import type { EnemyData, EnemyStats } from '../data/gameData';
  * 攻撃の出どころ。よろいは大ほう（と、その火）以外を減らす。
  * 氷・火・かみなりはノックバックしない。たては正面からの矢と氷の玉を防ぐ
  */
-export type DamageSource = 'player' | 'arrow' | 'cannon' | 'ice' | 'fire' | 'lightning';
+export type DamageSource = 'player' | 'arrow' | 'cannon' | 'ice' | 'fire' | 'lightning' | 'friend' | 'magic';
 
 /** よろいを考えたダメージ */
 export function damageTo(stats: EnemyStats, dmg: number, src: DamageSource, data: EnemyData): number {

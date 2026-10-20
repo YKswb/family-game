@@ -1,0 +1,56 @@
+{
+  "radius": 12,
+  "followBehind": 40,
+  "followSide": 26,
+  "engageRange": 160,
+  "leash": 240,
+  "warpDistance": 420,
+  "guardRadius": 280,
+  "guardPost": [0, 100],
+  "kinds": {
+    "momo": {
+      "name": "もも",
+      "animal": "うさぎ",
+      "icon": "🐰",
+      "desc": "すばやく 何度も こうげきする",
+      "color": "#f6eef0",
+      "speed": 280,
+      "damage": 0.8,
+      "interval": 0.32,
+      "reach": 26,
+      "knockback": 90,
+      "ranged": false,
+      "air": false
+    },
+    "goro": {
+      "name": "ごろう",
+      "animal": "くま",
+      "icon": "🐻",
+      "desc": "力が 強く、まわりの 敵を おしかえす",
+      "color": "#a0703f",
+      "speed": 185,
+      "damage": 2.4,
+      "interval": 1.0,
+      "reach": 32,
+      "knockback": 260,
+      "splash": 40,
+      "ranged": false,
+      "air": false
+    },
+    "hosuke": {
+      "name": "ほうすけ",
+      "animal": "ふくろう",
+      "icon": "🦉",
+      "desc": "空を とび、空の 敵にも とどく 遠くからの こうげき",
+      "color": "#9b8466",
+      "speed": 235,
+      "damage": 1.0,
+      "interval": 0.8,
+      "reach": 170,
+      "knockback": 40,
+      "ranged": true,
+      "air": true,
+      "fly": true
+    }
+  }
+}

@@ -4,6 +4,7 @@ import type { Tree } from '../entities/Tree';
 import type { Spot } from '../systems/Build';
 import type { World } from '../systems/World';
 import { enemyLift, enemySquash, wingFrame } from './EnemyView';
+import { drawFriend } from './FriendView';
 import { drawPlayer } from './PlayerView';
 import { spotPulse } from './SpotView';
 import { TEX_SCALE, type Baked, type Textures } from './Textures';
@@ -40,6 +41,7 @@ export class Scenery {
   private readonly icons = new Map<Spot, Baked>();
   private readonly house: Baked;
   private readonly player: Phaser.GameObjects.Graphics;
+  private readonly friend: Phaser.GameObjects.Graphics;
   private readonly enemies = new Map<Enemy, { body: Baked; shadow: Baked }>();
   private falling: Falling[] = [];
 
@@ -65,6 +67,7 @@ export class Scenery {
     }
     this.house = toWorld(tex.house(world.house.x, world.house.y).setDepth(depthOf(world.house.y)));
     this.player = toWorld(scene.add.graphics());
+    this.friend = toWorld(scene.add.graphics());
   }
 
   /** 木が切り倒された：その場で倒れていく木を出す（木そのものはすぐ切り株になる） */
@@ -147,6 +150,11 @@ export class Scenery {
     const p = w.player;
     this.player.clear().setDepth(depthOf(p.y));
     drawPlayer(this.player, p, w.levelOf('axe'));
+    const c = w.companion;
+    if (c) {
+      this.friend.clear().setDepth(depthOf(c.y));
+      drawFriend(this.friend, c);
+    }
 
     this.updateEnemies(x0 - 60, y0, x1 + 60, y1);
   }

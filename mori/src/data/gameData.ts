@@ -1,4 +1,5 @@
 import buildingsJson from './buildings.json';
+import companionsJson from './companions.json';
 import difficultyJson from './difficulty.json';
 import enemiesJson from './enemies.json';
 import homeJson from './home.json';
@@ -247,8 +248,62 @@ export interface WeatherData {
   size: number;
 }
 
+export type CompanionKind = 'momo' | 'goro' | 'hosuke';
+export const COMPANION_KINDS: CompanionKind[] = ['momo', 'goro', 'hosuke'];
+
+/** 仲間1人の強さと得意なこと */
+export interface CompanionStats {
+  name: string;
+  animal: string;
+  icon: string;
+  desc: string;
+  color: string;
+  speed: number;
+  damage: number;
+  interval: number;
+  /** 近くで攻撃する仲間は、体の縁から敵の縁までの距離。遠くから攻撃する仲間は射程 */
+  reach: number;
+  knockback: number;
+  /** 当たった敵のまわりにもダメージ（半径） */
+  splash?: number;
+  ranged: boolean;
+  /** 空の敵に当たるか */
+  air: boolean;
+  /** 空を飛ぶ（木やおうちにぶつからない） */
+  fly?: boolean;
+}
+
+export interface CompanionData {
+  radius: number;
+  /** 「ついてきて」のとき、あらたの後ろ・横にどれだけ離れて付くか */
+  followBehind: number;
+  followSide: number;
+  /** 「ついてきて」のとき、あらたからこの距離の中の敵と戦う */
+  engageRange: number;
+  /** あらたからこれより離れたら、戦うのをやめて戻る */
+  leash: number;
+  /** これより離れたら（木に引っかかったときなど）、あらたのそばへ一気に戻る */
+  warpDistance: number;
+  /** 「おうちを守って」のとき、おうちからこの距離の中の敵と戦う */
+  guardRadius: number;
+  /** 「おうちを守って」のときに立つ場所（おうちからの相対位置） */
+  guardPost: [number, number];
+  kinds: Record<CompanionKind, CompanionStats>;
+}
+
 /** まもりびとの家での強化の効き目 */
-export type HomeStat = 'speed' | 'attack' | 'capacity' | 'chop' | 'towerDamage' | 'buildCost' | 'houseHp' | 'wallHp' | 'startWood';
+export type HomeStat =
+  | 'speed'
+  | 'attack'
+  | 'capacity'
+  | 'chop'
+  | 'towerDamage'
+  | 'buildCost'
+  | 'houseHp'
+  | 'wallHp'
+  | 'startWood'
+  | 'friendDamage'
+  | 'friendSpeed';
 
 export interface HomeUpgrade {
   id: string;
@@ -362,6 +417,7 @@ export interface GameData {
   difficulty: Difficulty[];
   upgrades: UpgradeData;
   home: HomeData;
+  companions: CompanionData;
 }
 
 export const GAME_DATA: GameData = {
@@ -373,6 +429,7 @@ export const GAME_DATA: GameData = {
   difficulty: difficultyJson,
   upgrades: upgradesJson as UpgradeData,
   home: homeJson as HomeData,
+  companions: companionsJson as unknown as CompanionData,
 };
 
 // JSON の配列は TypeScript では組（[number, number]）と見なされないので、unknown を経由する

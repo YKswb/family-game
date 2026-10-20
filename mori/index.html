@@ -32,6 +32,13 @@
     font: inherit; font-size: 18px; padding: 13px 20px; border: none; border-radius: 18px;
     background: var(--btn); color: var(--btn-ink); box-shadow: 0 5px 0 var(--btn-d); cursor: pointer; }
   #callnow:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--btn-d); }
+  /* 仲間への命令（いまの様子を小さく、押すとどうなるかを大きく） */
+  #friendbtn { position: fixed; left: calc(14px + env(safe-area-inset-left)); bottom: calc(14px + env(safe-area-inset-bottom));
+    font: inherit; font-size: 18px; line-height: 1.25; padding: 8px 16px 10px; border: none; border-radius: 18px; text-align: left;
+    background: #5aa0e8; color: #fff; box-shadow: 0 5px 0 #3a73b0; cursor: pointer; text-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
+  #friendbtn small { font-size: 13px; opacity: .92; }
+  #friendbtn.guard { background: #e8935a; box-shadow: 0 5px 0 #b06a3a; }
+  #friendbtn:active { transform: translateY(3px); box-shadow: 0 2px 0 #3a73b0; }
   .hide { display: none !important; }
 
   /* 選択・ひとやすみ・結果の画面 */
@@ -102,6 +109,7 @@
   <div id="game"></div>
   <button id="pause" class="hudbtn hide" aria-label="ひとやすみ">⏸</button>
   <button id="callnow" class="hide"></button>
+  <button id="friendbtn" class="hide"></button>
   <div id="menu" class="hide"></div>
   <div id="ov" class="hide"><div class="card" id="card"></div></div>
   <script type="module" src="/src/main.ts"></script>

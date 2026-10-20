@@ -34,6 +34,7 @@ export class Overlay {
   private readonly card = el('card');
   readonly pauseBtn = el('pause') as HTMLButtonElement;
   readonly callBtn = el('callnow') as HTMLButtonElement;
+  readonly friendBtn = el('friendbtn') as HTMLButtonElement;
 
   get visible(): boolean {
     return !this.ov.classList.contains('hide');

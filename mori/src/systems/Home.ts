@@ -17,10 +17,14 @@ export interface HomeBonus {
   /** かべの HP に足す（1 が基準） */
   wallHp: number;
   startWood: number;
+  /** 仲間の攻撃に足す（1 が基準） */
+  friendDamage: number;
+  /** 仲間の動く速さと攻撃の速さに足す（1 が基準） */
+  friendSpeed: number;
 }
 
 export function noBonus(): HomeBonus {
-  return { speed: 0, attack: 0, capacity: 0, chop: 1, towerDamage: 0, buildCost: 1, houseHp: 0, wallHp: 0, startWood: 0 };
+  return { speed: 0, attack: 0, capacity: 0, chop: 1, towerDamage: 0, buildCost: 1, houseHp: 0, wallHp: 0, startWood: 0, friendDamage: 0, friendSpeed: 0 };
 }
 
 /** セーブの強化レベルから、ステージに持っていく力を出す */

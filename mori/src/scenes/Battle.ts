@@ -11,6 +11,7 @@ import { Joystick } from '../ui/Joystick';
 import { Overlay } from '../ui/Overlay';
 import { Effects } from '../views/Effects';
 import { drawEnemyHp, enemyLift } from '../views/EnemyView';
+import { FRIEND_LIFT } from '../systems/Companions';
 import { CHIMNEY } from '../views/HouseView';
 import { stackTop } from '../views/PlayerView';
 import { Scenery } from '../views/Scenery';
@@ -130,6 +131,7 @@ export class BattleScene extends Phaser.Scene {
       difficulty,
       home: homeBonus(this.save, GAME_DATA.home),
       towers: availableTowers(stage, this.save),
+      companion: this.save.friend,
     });
     this.leaf = [hex(th.leaf[0]), hex(th.leaf[1])];
     this.terrShown = this.world.territory;
@@ -169,8 +171,11 @@ export class BattleScene extends Phaser.Scene {
     this.overlay.callBtn.textContent = TEXT.callNow;
     this.overlay.callBtn.onclick = () => this.world.callNow();
     this.overlay.pauseBtn.onclick = () => this.pause();
+    this.overlay.friendBtn.onclick = () => this.world.toggleCompanionMode();
 
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
+    // パソコンでは C キーで仲間への命令を切り替える
+    this.input.keyboard!.on('keydown-C', () => this.world.toggleCompanionMode());
 
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -209,6 +214,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.overlay.pauseBtn.classList.toggle('hide', w.outcome !== 'playing' || this.overlay.visible);
     this.overlay.callBtn.classList.toggle('hide', !(running && w.phase === 'prep'));
+    this.updateFriendButton(running);
     const fxDt = running ? dt : 0;
     this.terrShown += (w.territory - this.terrShown) * Math.min(1, dt * 2.5);
     this.shake = Math.max(0, this.shake - dt);
@@ -274,6 +280,24 @@ export class BattleScene extends Phaser.Scene {
         { label: TEXT.quit, secondary: true, onTap: () => this.goHome() },
       ],
     });
+  }
+
+  /** 仲間への命令ボタン：上にいまの様子を小さく、下に押すとどうなるかを大きく出す */
+  private updateFriendButton(running: boolean): void {
+    const btn = this.overlay.friendBtn;
+    const c = this.world.companion;
+    btn.classList.toggle('hide', !c || !running);
+    if (!c) return;
+    const name = `${c.stats.icon} ${c.stats.name}`;
+    const html =
+      c.mode === 'follow'
+        ? `<small>${fmt(TEXT.friendFollowing, { name })}</small><br>${TEXT.toGuard}`
+        : `<small>${fmt(TEXT.friendGuarding, { name })}</small><br>${TEXT.toFollow}`;
+    if (btn.dataset.html !== html) {
+      btn.innerHTML = html;
+      btn.dataset.html = html;
+      btn.classList.toggle('guard', c.mode === 'guard');
+    }
   }
 
   private goHome(): void {
@@ -572,6 +596,17 @@ export class BattleScene extends Phaser.Scene {
         f.fillCircle(a.x - 1, a.y - 1, 2);
         continue;
       }
+      if (a.kind === 'magic') {
+        // ふくろうの魔法の玉：うす紫に光る玉と、短い尾
+        const l = Math.hypot(a.vx, a.vy) || 1;
+        f.fillStyle(0xc9a8ff, 0.3);
+        f.fillCircle(a.x - (a.vx / l) * 8, a.y - (a.vy / l) * 8, 6);
+        f.fillStyle(0xd8c2ff, 0.45);
+        f.fillCircle(a.x, a.y, 9);
+        f.fillStyle(0xffffff, 1);
+        f.fillCircle(a.x, a.y, 4);
+        continue;
+      }
       const l = Math.hypot(a.vx, a.vy) || 1;
       const bx = a.x - (a.vx / l) * 16;
       const by = a.y - (a.vy / l) * 16;
@@ -717,6 +752,24 @@ export class BattleScene extends Phaser.Scene {
       case 'escape':
         this.popup(w.house.x, w.house.y - 170, TEXT.escaped, '#ffb0a0');
         break;
+      case 'friendAttack': {
+        const c = e.companion;
+        if (c.stats.ranged) fx.sparkle(c.x, c.y - FRIEND_LIFT - 14, 3, 0xe8d8ff);
+        else if (c.kind === 'goro') {
+          fx.ring(e.x, e.y + 10, 8, c.stats.splash ?? 40, 0xffe2b0, 0.3, 5);
+          this.shake = Math.max(this.shake, 0.05);
+        } else fx.burst(e.x, e.y, 0xffffff, 3, 90, 3);
+        break;
+      }
+      case 'friendWarp':
+        fx.smoke(e.companion.x, e.companion.y - 10, 6, 9, 0xffffff, 50);
+        fx.sparkle(e.companion.x, e.companion.y - 20, 6);
+        break;
+      case 'friendMode': {
+        const c = w.companion;
+        if (c) this.popup(c.x, c.y - 60, fmt(e.mode === 'follow' ? TEXT.friendSaysFollow : TEXT.friendSaysGuard, { name: c.stats.name }), '#ffffff');
+        break;
+      }
       case 'healPulse':
         fx.ring(e.enemy.x, e.enemy.y - e.enemy.r, 12, e.radius, 0x7dffa0, 0.6, 5);
         fx.plus(e.enemy.x, e.enemy.y - e.enemy.r * 2, 4, 0x7dffa0);

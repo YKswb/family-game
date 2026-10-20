@@ -3,10 +3,10 @@ import type { Enemy } from '../entities/Enemy';
 import type { Spot } from './Build';
 import type { World } from './World';
 
-/** 矢と氷の玉（敵を追いかける） */
+/** 矢と氷の玉と、ふくろうの魔法の玉（敵を追いかける） */
 export interface Bolt {
   type: 'bolt';
-  kind: 'arrow' | 'ice';
+  kind: 'arrow' | 'ice' | 'magic';
   x: number;
   y: number;
   vx: number;

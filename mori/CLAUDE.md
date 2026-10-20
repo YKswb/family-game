@@ -138,8 +138,8 @@ Oct 19, 2026 · 下書き
 - 戦場では自動で近くの敵を攻撃する。命令は2つで、ボタン1つで切り替える：「ついてきて」（あらたの後ろを付いて歩く）／「おうちを守って」（おうちのそばで守る）
 - 3人は得意なことが違う（案）：素早く何度も攻撃する、力が強くて敵を押し返す、空の敵にも届く遠くからの攻撃
 - 仲間も「まもりびとの家」で、なつこの愛を使って強くできる
-- 仲間は倒されても消えず、しばらく休んでから戻ってくる（子どもが悲しくならないように）
-- 名前と見た目はおまかせ（森の動物。案：うさぎ・くま・ふくろう）
+- 敵は仲間を攻撃しないので、仲間が倒されることはない（子どもが悲しくならないように）
+- 3人：うさぎの「もも」（すばやく何度も攻撃）、くまの「ごろう」（力が強く、まわりの敵を押し返す）、ふくろうの「ほうすけ」（空を飛び、空の敵にも届く遠くからの攻撃）。数値は `data/companions.json`
 
 ## セーブ
 
@@ -181,7 +181,7 @@ mori/
     main.ts                Phaser の設定とシーン登録
     scenes/                Boot, Menu（タイトル・まもりびとの家・ステージ選び。画面は ui/Menus の HTML）, Battle（結果の画面を含む）
     systems/               World, Combat, Waves, Build, Level, Upgrades, Save
-    entities/              Player, Enemy, Tower, Wall, Tree, House
+    entities/              Player, Companion（仲間）, Enemy, Tree, House（とうとかべは systems/Build の Spot）
     views/                 各エンティティの描画と演出
     ui/                    Hud, Joystick, Dialog, Choice(3択), Button
     data/
@@ -189,6 +189,7 @@ mori/
       enemies.json         敵の数値と特徴
       upgrades.json        戦闘中の強化（レベルアップの3択）
       home.json            まもりびとの家の強化・とうの解放・クリアのごほうび
+      companions.json      仲間3人の強さと、ついてくる・守るときの距離
       difficulty.json      難易度の倍率
       text.json            画面の文言
       stages/stage1.json … stage8.json, endless.json
@@ -230,7 +231,7 @@ mori/
 
 - [x] 主人公と森の精霊の名前（あらた、れい。最後の敵は まおう おゆきち）
 - [x] ステージをまたいだ成長の通貨の名前（なつこの愛）
-- [ ] 仲間3人の名前と得意なこと（おまかせ。マイルストーン6で案を出す）
+- [x] 仲間3人の名前と得意なこと（もも・ごろう・ほうすけ。`docs/decisions.md` のマイルストーン6）
 - [ ] 仲間がどのステージで加わるか（マイルストーン7）
 - [x] 新しいとう2種と分かれ道の中身（案のとおり。数値は `docs/decisions.md` のマイルストーン4）
 - [x] 新しい敵4種の中身（案のとおり。数値は `docs/decisions.md` のマイルストーン4）

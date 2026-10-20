@@ -1,6 +1,7 @@
 import {
   GAME_DATA,
   type BuildingType,
+  type CompanionKind,
   type Difficulty,
   type EnemyKind,
   type GameData,
@@ -8,11 +9,13 @@ import {
   type StageData,
   type TowerKind,
 } from '../data/gameData';
+import { Companion, type CompanionMode } from '../entities/Companion';
 import { Enemy } from '../entities/Enemy';
 import { House } from '../entities/House';
 import { Player } from '../entities/Player';
 import { Tree } from '../entities/Tree';
 import { Spot, paySpot } from './Build';
+import { updateCompanion } from './Companions';
 import { damageTo, fromFront, knockbackOf, shieldable, type DamageSource } from './Combat';
 import { updateEnemies } from './Enemies';
 import { noBonus, type HomeBonus } from './Home';
@@ -58,6 +61,11 @@ export type WorldEvent =
   /** 木こりが木を持って逃げきった */
   | { type: 'escape'; enemy: Enemy }
   | { type: 'healPulse'; enemy: Enemy; radius: number }
+  /** 仲間が攻撃した（x, y は当たった敵の上） */
+  | { type: 'friendAttack'; companion: Companion; x: number; y: number }
+  /** 仲間が離れすぎて、あらたのそばへ一気に戻った */
+  | { type: 'friendWarp'; companion: Companion }
+  | { type: 'friendMode'; mode: CompanionMode }
   | { type: 'won' }
   | { type: 'lost' };
 
@@ -116,6 +124,8 @@ export interface WorldOptions {
   home?: HomeBonus;
   /** 建てられるとうの種類（省略時はステージのとう。解放したとうを足して渡す） */
   towers?: TowerKind[];
+  /** 連れていく仲間（省略時はなし） */
+  companion?: CompanionKind | null;
 }
 
 /** 1ステージ分の状態と時間の進め方。描画とは切り離してあり、ヘッドレスでも動く */
@@ -131,6 +141,8 @@ export class World {
   readonly height: number;
   readonly house: House;
   readonly player: Player;
+  /** 一緒に戦う仲間（連れていかないときは null） */
+  readonly companion: Companion | null = null;
   readonly trees: Tree[];
   readonly spots: Spot[] = [];
   /** かべの区画（添字が区画の番号） */
@@ -204,6 +216,20 @@ export class World {
     this.timer = this.diff.firstPrep;
     this.createSpots();
     this.player.wood = Math.min(this.capacity, home.startWood);
+    if (opts.companion) {
+      const stats = this.data.companions.kinds[opts.companion];
+      const p = this.player;
+      this.companion = new Companion(opts.companion, stats, p.x - this.data.companions.followBehind, p.y + this.data.companions.followSide, 1 + home.friendDamage, 1 + home.friendSpeed);
+    }
+  }
+
+  /** 仲間への命令を切り替える（ついてきて ⇔ おうちを守って） */
+  toggleCompanionMode(): void {
+    const c = this.companion;
+    if (!c || this.outcome !== 'playing') return;
+    c.mode = c.mode === 'follow' ? 'guard' : 'follow';
+    c.target = null;
+    this.events.push({ type: 'friendMode', mode: c.mode });
   }
 
   private createSpots(): void {
@@ -277,6 +303,7 @@ export class World {
     this.time += dt;
     this.movePlayer(dt);
     this.playerAct(dt);
+    updateCompanion(this, dt);
     this.updateTrees(dt);
     this.updateSpots(dt);
     updateTowers(this, dt);
@@ -598,8 +625,8 @@ export class World {
     this.events.push({ type: 'spawn', enemy: e });
   }
 
-  /** 敵にダメージを与える。倒したら木材を落とし、経験値をもらう */
-  hurt(e: Enemy, dmg: number, fromX: number, fromY: number, src: DamageSource): void {
+  /** 敵にダメージを与える。倒したら木材を落とし、経験値をもらう。knockback を渡すと、ノックバックの強さをその値にする */
+  hurt(e: Enemy, dmg: number, fromX: number, fromY: number, src: DamageSource, knockback?: number): void {
     if (e.dead) return;
     const ed = this.data.enemies;
     let amount = damageTo(e.stats, dmg, src, ed);
@@ -613,7 +640,7 @@ export class World {
       e.hitF = 0.12;
       this.events.push({ type: 'hit', enemy: e });
     }
-    const kb = knockbackOf(e.stats, src, ed);
+    const kb = knockback ?? knockbackOf(e.stats, src, ed);
     if (kb > 0) {
       const dx = e.x - fromX;
       const dy = e.y - fromY;

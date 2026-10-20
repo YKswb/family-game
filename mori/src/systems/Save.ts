@@ -1,4 +1,4 @@
-import { TOWER_KINDS, type TowerKind } from '../data/gameData';
+import { COMPANION_KINDS, TOWER_KINDS, type CompanionKind, type TowerKind } from '../data/gameData';
 
 /** localStorage のキー（ルートの CLAUDE.md の決まりで mori3_ で始める。今の版の mori3_prog とは別） */
 export const SAVE_KEY = 'mori3_save';
@@ -27,13 +27,31 @@ export interface SaveData {
   stages: Record<string, StageRecord>;
   /** 最後に選んだ難易度 */
   difficulty: number;
+  /** 仲間になった動物（マイルストーン7で物語に合わせて増えるようにする。それまでは3人とも） */
+  friends: CompanionKind[];
+  /** 連れていく仲間 */
+  friend: CompanionKind | null;
   /** むげんモードの最高ウェーブ */
   endlessBest: number;
 }
 
 export function newSave(): SaveData {
-  return { v: VERSION, love: 0, levels: {}, unlocked: [], seen: [], stages: {}, difficulty: 1, endlessBest: 0 };
+  return {
+    v: VERSION,
+    love: 0,
+    levels: {},
+    unlocked: [],
+    seen: [],
+    stages: {},
+    difficulty: 1,
+    friends: [...COMPANION_KINDS],
+    friend: COMPANION_KINDS[0],
+    endlessBest: 0,
+  };
 }
+
+const friendList = (x: unknown): CompanionKind[] =>
+  Array.isArray(x) ? (x.filter((k) => COMPANION_KINDS.includes(k as CompanionKind)) as CompanionKind[]).filter((k, i, a) => a.indexOf(k) === i) : [];
 
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const towerList = (x: unknown): TowerKind[] =>
@@ -72,6 +90,11 @@ export function parseSave(raw: string | null): SaveData {
     }
   }
   if (isNum(o.difficulty) && [0, 1, 2].includes(o.difficulty)) s.difficulty = o.difficulty;
+  // 前のセーブ（仲間がいなかったころ）には friends がないので、そのときは新しいセーブの仲間のままにする
+  if (Array.isArray(o.friends)) s.friends = friendList(o.friends);
+  if (o.friend === null) s.friend = null;
+  else if (COMPANION_KINDS.includes(o.friend as CompanionKind) && s.friends.includes(o.friend as CompanionKind)) s.friend = o.friend as CompanionKind;
+  if (s.friend && !s.friends.includes(s.friend)) s.friend = s.friends[0] ?? null;
   if (isNum(o.endlessBest) && o.endlessBest >= 0) s.endlessBest = Math.floor(o.endlessBest);
   return s;
 }
