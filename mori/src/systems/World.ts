@@ -126,6 +126,8 @@ export interface WorldOptions {
   towers?: TowerKind[];
   /** 連れていく仲間（省略時はなし） */
   companion?: CompanionKind | null;
+  /** 物語で足す敵（おゆきちが呼ぶ）：このウェーブの最初に出す */
+  extra?: { wave: number; kinds: EnemyKind[] };
 }
 
 /** 1ステージ分の状態と時間の進め方。描画とは切り離してあり、ヘッドレスでも動く */
@@ -136,6 +138,7 @@ export class World {
   /** 建てたときに選べるとうの種類 */
   readonly towers: TowerKind[];
   readonly home: HomeBonus;
+  private readonly extra: { wave: number; kinds: EnemyKind[] } | null;
   readonly diff: Difficulty;
   readonly width: number;
   readonly height: number;
@@ -200,6 +203,7 @@ export class World {
     this.height = stage.height;
     this.rng = new Random(opts.seed ?? 1);
     this.towers = opts.towers ?? stage.towers;
+    this.extra = opts.extra ?? null;
     const home = (this.home = opts.home ?? noBonus());
     // 家の強化は、戦闘中の強化の出発点として入れておく
     this.mods.speed += home.speed;
@@ -731,7 +735,8 @@ export class World {
       return;
     }
     if (this.enemies.length > 0) return;
-    if (this.wave >= wd.count) {
+    // むげんモードは勝ちがなく、おうちが壊されるまで続く
+    if (!wd.endless && this.wave >= wd.count) {
       this.win();
       return;
     }
@@ -747,9 +752,10 @@ export class World {
     this.phase = 'fight';
     this.hpMul = waveHpMul(wd, this.wave, this.diff);
     this.toSpawn = waveList(wd, this.wave, this.diff, this.rng);
+    if (this.extra && this.extra.wave === this.wave) this.toSpawn.unshift(...this.extra.kinds);
     this.spawnT = 0.5;
     this.dirs = waveDirections(wd, this.wave, this.rng);
-    this.events.push({ type: 'wave', n: this.wave, last: this.wave === wd.count });
+    this.events.push({ type: 'wave', n: this.wave, last: !wd.endless && this.wave === wd.count });
   }
 
   private win(): void {

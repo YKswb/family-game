@@ -1,0 +1,67 @@
+{
+  "id": "stage7",
+  "name": "炎の火山",
+  "tip": "木こりと 魔法使いは、自分で たおしに いこう。ちゆの とうが 来たよ！",
+  "towers": ["arrow", "cannon", "ice", "lightning", "heal"],
+  "reward": 48,
+  "theme": {
+    "background": "#3a2420",
+    "ground": "#7a5a4a",
+    "tuft": ["#6a4a3c", "#8a6a58"],
+    "flower": ["#ff7a3a", "#ffb347", "#ff5a3a"],
+    "leaf": ["#4a6a2f", "#6a8a3a"],
+    "clearing": "#96785f",
+    "fog": "#280a05",
+    "tint": { "color": "#ff3c14", "alpha": 0.1 },
+    "weather": { "type": "embers", "colors": ["#ff9a3a", "#ffd84d", "#ff5a2a"], "count": 26, "size": 5 }
+  },
+  "width": 1400,
+  "height": 1400,
+  "house": { "x": 700, "y": 700, "r": 58 },
+  "player": { "x": 700, "y": 795 },
+  "territory": [320, 440, 580],
+  "trees": {
+    "count": 260,
+    "minFromHouse": 250,
+    "spacing": 52,
+    "margin": 40,
+    "keepClear": [[300, 0], [-300, 0], [0, 320], [0, -320], [0, 280], [0, 400]],
+    "keepClearRadius": 60
+  },
+  "spots": [
+    { "type": "tower", "dx": -100, "dy": -100 },
+    { "type": "tower", "dx": 100, "dy": -100 },
+    { "type": "tower", "dx": -100, "dy": 100 },
+    { "type": "tower", "dx": 100, "dy": 100 },
+    { "type": "axe", "dx": 150, "dy": 0 },
+    { "type": "bag", "dx": -150, "dy": 0 },
+    { "type": "land", "dx": 0, "dy": 280, "moves": [[0,400]] },
+    { "type": "tower", "dx": 300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": -300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": 0, "dy": -320, "territory": 2 },
+    { "type": "tower", "dx": 0, "dy": 320, "territory": 2 }
+  ],
+  "waves": {
+    "count": 10,
+    "base": 7,
+    "grow": 3,
+    "minCount": 3,
+    "pool": [
+      { "kind": "slime", "weight": 2, "from": 1 },
+      { "kind": "goblin", "weight": 2, "from": 1 },
+      { "kind": "bat", "weight": 2, "from": 1 },
+      { "kind": "wolf", "weight": 2, "from": 2 },
+      { "kind": "knight", "weight": 2, "from": 2 },
+      { "kind": "lumberjack", "weight": 1, "from": 3 },
+      { "kind": "healer", "weight": 1, "from": 4 },
+      { "kind": "shield", "weight": 1, "from": 5 },
+      { "kind": "splitter", "weight": 1, "from": 6 }
+    ],
+    "boss": "boss",
+    "directions": [{ "from": 2, "count": 2 }, { "from": 6, "count": 3 }],
+    "hpGrowth": 0.16,
+    "stageHpBonus": 0.24,
+    "bossHpBonus": 1.5,
+    "spawnInterval": { "start": 1, "perWave": 0.05, "stageBonus": 0.24, "min": 0.35 }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "id": "stage3",
+  "name": "雪の森",
+  "tip": "こうもりは かべを とびこえる！ 矢の とうで ねらおう",
+  "towers": ["arrow", "cannon", "ice"],
+  "reward": 24,
+  "theme": {
+    "background": "#9fb7c6",
+    "ground": "#e8f1f6",
+    "tuft": ["#d2e0ea", "#f7fbfd"],
+    "flower": ["#bfe3ff", "#ffffff", "#d2e0ea"],
+    "leaf": ["#2f7a5a", "#4f9a7a"],
+    "clearing": "#d6c8aa",
+    "fog": "#283c55",
+    "snow": true,
+    "weather": { "type": "snow", "colors": ["#ffffff", "#eaf6ff"], "count": 40, "size": 5 }
+  },
+  "width": 1400,
+  "height": 1400,
+  "house": { "x": 700, "y": 700, "r": 58 },
+  "player": { "x": 700, "y": 795 },
+  "territory": [320, 440, 580],
+  "trees": {
+    "count": 260,
+    "minFromHouse": 250,
+    "spacing": 52,
+    "margin": 40,
+    "keepClear": [[300, 0], [-300, 0], [0, 320], [0, -320], [0, 280], [0, 400]],
+    "keepClearRadius": 60
+  },
+  "spots": [
+    { "type": "tower", "dx": -100, "dy": -100 },
+    { "type": "tower", "dx": 100, "dy": -100 },
+    { "type": "tower", "dx": -100, "dy": 100 },
+    { "type": "tower", "dx": 100, "dy": 100 },
+    { "type": "axe", "dx": 150, "dy": 0 },
+    { "type": "bag", "dx": -150, "dy": 0 },
+    { "type": "land", "dx": 0, "dy": 280, "moves": [[0,400]] },
+    { "type": "tower", "dx": 300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": -300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": 0, "dy": -320, "territory": 2 },
+    { "type": "tower", "dx": 0, "dy": 320, "territory": 2 }
+  ],
+  "waves": {
+    "count": 8,
+    "base": 5,
+    "grow": 2,
+    "minCount": 3,
+    "pool": [
+      { "kind": "slime", "weight": 3, "from": 1 },
+      { "kind": "goblin", "weight": 1, "from": 1 },
+      { "kind": "bat", "weight": 1, "from": 2 },
+      { "kind": "wolf", "weight": 1, "from": 4 }
+    ],
+    "boss": "boss",
+    "directions": [{ "from": 3, "count": 2 }],
+    "hpGrowth": 0.08,
+    "stageHpBonus": 0.08,
+    "bossHpBonus": 0.5,
+    "spawnInterval": { "start": 1, "perWave": 0.05, "stageBonus": 0.08, "min": 0.35 }
+  }
+}

@@ -111,8 +111,18 @@ export class Menus {
     this.on('#m-stages', () => h.onStages());
   }
 
-  /** ステージ選び：難易度、連れていく仲間、ステージの★・王冠 */
-  showStages(s: SaveData, stages: StageData[], data: GameData, h: StageHandlers): void {
+  /**
+   * ステージ選び：難易度、連れていく仲間、ステージの★・王冠。open[i] が false のステージは鍵がかかっている。
+   * endless を渡すと、むげんモードの行を最後に出す
+   */
+  showStages(
+    s: SaveData,
+    stages: StageData[],
+    open: boolean[],
+    data: GameData,
+    h: StageHandlers,
+    endless?: { stage: StageData; open: boolean },
+  ): void {
     const diffs = data.difficulty
       .map((d, i) => `<button class="dbtn ${s.difficulty === i ? 'on' : ''}" data-diff="${i}">${escape(d.name)}</button>`)
       .join('');
@@ -121,34 +131,41 @@ export class Menus {
       .map((k) => `<button class="dbtn ${s.friend === k ? 'on' : ''}" data-friend="${k}">${escape(kinds[k].icon)} ${escape(kinds[k].name)}</button>`)
       .join('');
     const picked = s.friend ? kinds[s.friend] : null;
-    const friendRow = s.friends.length
-      ? `<div class="group" style="justify-content:center">🐾 ${escape(TEXT.friendTitle)}</div><div class="diff">${friendButtons}</div>${
+    const friendBody = s.friends.length
+      ? `<div class="diff">${friendButtons}</div>${
           picked ? `<p class="note" style="text-align:center">${escape(fmt(TEXT.friendDesc, { animal: picked.animal, name: picked.name, desc: picked.desc }))}</p>` : ''
         }`
-      : '';
-    let n = 0;
+      : `<p class="note" style="text-align:center">${escape(TEXT.friendNone)}</p>`;
+    const friendRow = `<div class="group" style="justify-content:center">🐾 ${escape(TEXT.friendTitle)}</div>${friendBody}`;
     const rows = stages
-      .map((st) => {
+      .map((st, i) => {
+        if (!open[i]) {
+          return `<button class="sbtn" disabled><span class="sw" style="background:#9a9a9a">🔒</span><span class="nm">${escape(fmt(TEXT.stageLocked, { n: i + 1 }))}</span><span class="st"></span></button>`;
+        }
         const rec = s.stages[st.id];
-        const practice = st.id === 'practice';
-        const label = practice ? '🧪' : String(++n);
-        const color = practice ? '#8a6bd1' : STAGE_COLORS[(n - 1) % STAGE_COLORS.length];
+        const color = STAGE_COLORS[i % STAGE_COLORS.length];
         const stars = rec ? '★'.repeat(rec.stars) + '☆'.repeat(3 - rec.stars) : '☆☆☆';
-        const name = practice ? TEXT.practiceName : st.name;
-        return `<button class="sbtn" data-stage="${escape(st.id)}"><span class="sw" style="background:${color}">${label}</span><span class="nm">${escape(name)}</span><span class="st">${rec?.crown ? '👑' : ''}${practice ? '' : stars}</span></button>`;
+        return `<button class="sbtn" data-stage="${escape(st.id)}"><span class="sw" style="background:${color}">${i + 1}</span><span class="nm">${escape(st.name)}</span><span class="st">${rec?.crown ? '👑' : ''}${stars}</span></button>`;
       })
       .join('');
+    let endlessRow = '';
+    if (endless?.open) {
+      endlessRow = `<button class="sbtn" data-stage="${escape(endless.stage.id)}"><span class="sw" style="background:#7a4ad8">∞</span><span class="nm">${escape(endless.stage.name)}</span><span class="st">${escape(fmt(TEXT.endlessBest, { n: s.endlessBest }))}</span></button>`;
+    } else if (endless) {
+      endlessRow = `<button class="sbtn" disabled><span class="sw" style="background:#9a9a9a">🔒</span><span class="nm">${escape(endless.stage.name)}</span><span class="st" style="color:var(--sub);font-size:14px">${escape(TEXT.endlessLocked)}</span></button>`;
+    }
     this.open(`<div class="panel">
       <div class="head"><h2>🗺️ ${escape(TEXT.stages)}</h2><span class="love">${escape(fmt(TEXT.love, { n: s.love }))}</span></div>
       <div class="diff">${diffs}</div><p class="note" style="text-align:center">${escape(TEXT.crownNote)}</p>
       ${friendRow}
-      <div class="stages">${rows}</div>
+      <div class="stages">${rows}${endlessRow}</div>
       <div class="foot"><button class="btn2" id="m-back">${escape(TEXT.backHome)}</button></div>
     </div>`);
+    const all = endless ? [...stages, endless.stage] : stages;
     this.on('[data-diff]', (el) => h.onDifficulty(Number(el.dataset.diff)));
     this.on('[data-friend]', (el) => h.onFriend(el.dataset.friend as CompanionKind));
     this.on('[data-stage]', (el) => {
-      const st = stages.find((x) => x.id === el.dataset.stage);
+      const st = all.find((x) => x.id === el.dataset.stage);
       if (st) h.onPick(st);
     });
     this.on('#m-back', () => h.onBack());

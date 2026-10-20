@@ -1,0 +1,69 @@
+{
+  "id": "stage8",
+  "name": "おゆきちの城",
+  "tip": "さいごに おゆきちが 来るよ！ ぜんぶの 力で まもろう",
+  "towers": ["arrow", "cannon", "ice", "lightning", "heal"],
+  "reward": 60,
+  "theme": {
+    "background": "#14241a",
+    "ground": "#4f7a52",
+    "tuft": ["#456d48", "#5d8a5f"],
+    "flower": ["#c8e6ff", "#ffe98a", "#ffffff"],
+    "leaf": ["#1f5a3a", "#3a7a4f"],
+    "clearing": "#aaa082",
+    "fog": "#050a19",
+    "tint": { "color": "#141950", "alpha": 0.28 },
+    "night": true,
+    "weather": { "type": "fireflies", "colors": ["#ffe98a", "#c8e6ff"], "count": 18, "size": 5 }
+  },
+  "width": 1400,
+  "height": 1400,
+  "house": { "x": 700, "y": 700, "r": 58 },
+  "player": { "x": 700, "y": 795 },
+  "territory": [320, 440, 580],
+  "trees": {
+    "count": 260,
+    "minFromHouse": 250,
+    "spacing": 52,
+    "margin": 40,
+    "keepClear": [[300, 0], [-300, 0], [0, 320], [0, -320], [0, 280], [0, 400]],
+    "keepClearRadius": 60
+  },
+  "spots": [
+    { "type": "tower", "dx": -100, "dy": -100 },
+    { "type": "tower", "dx": 100, "dy": -100 },
+    { "type": "tower", "dx": -100, "dy": 100 },
+    { "type": "tower", "dx": 100, "dy": 100 },
+    { "type": "axe", "dx": 150, "dy": 0 },
+    { "type": "bag", "dx": -150, "dy": 0 },
+    { "type": "land", "dx": 0, "dy": 280, "moves": [[0,400]] },
+    { "type": "tower", "dx": 300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": -300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": 0, "dy": -320, "territory": 2 },
+    { "type": "tower", "dx": 0, "dy": 320, "territory": 2 }
+  ],
+  "waves": {
+    "count": 10,
+    "base": 8,
+    "grow": 3,
+    "minCount": 3,
+    "pool": [
+      { "kind": "slime", "weight": 2, "from": 1 },
+      { "kind": "goblin", "weight": 2, "from": 1 },
+      { "kind": "bat", "weight": 2, "from": 1 },
+      { "kind": "wolf", "weight": 2, "from": 1 },
+      { "kind": "knight", "weight": 2, "from": 1 },
+      { "kind": "splitter", "weight": 1, "from": 1 },
+      { "kind": "shield", "weight": 1, "from": 2 },
+      { "kind": "mole", "weight": 1, "from": 3 },
+      { "kind": "lumberjack", "weight": 1, "from": 4 },
+      { "kind": "healer", "weight": 1, "from": 5 }
+    ],
+    "boss": "maou",
+    "directions": [{ "from": 2, "count": 2 }, { "from": 5, "count": 3 }],
+    "hpGrowth": 0.18,
+    "stageHpBonus": 0.28,
+    "bossHpBonus": 1.75,
+    "spawnInterval": { "start": 1, "perWave": 0.05, "stageBonus": 0.28, "min": 0.35 }
+  }
+}

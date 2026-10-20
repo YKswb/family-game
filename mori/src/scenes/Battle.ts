@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
-import { GAME_DATA, PRACTICE_STAGE, STAGES, stageById, type StageData } from '../data/gameData';
+import { GAME_DATA, PRACTICE_STAGE, SPEAKERS, STAGES, STORIES, stageById, type StageData, type StoryData, type StoryLine } from '../data/gameData';
 import type { Spot } from '../systems/Build';
-import { availableTowers, clearStage, homeBonus, markSeen } from '../systems/Home';
+import { availableTowers, clearStage, endEndless, homeBonus, joinFriend, markSeen } from '../systems/Home';
 import { Random } from '../systems/Random';
 import { SaveStore, type SaveData } from '../systems/Save';
 import { World, type WorldEvent } from '../systems/World';
 import { DPR, TEXT, fmt, hex, screenSize, textStyle, worldZoom } from '../ui/Display';
 import { Hud } from '../ui/Hud';
+import { Dialog } from '../ui/Dialog';
 import { Joystick } from '../ui/Joystick';
 import { Overlay } from '../ui/Overlay';
 import { Effects } from '../views/Effects';
@@ -64,6 +65,11 @@ export class BattleScene extends Phaser.Scene {
   private startData: BattleData = {};
   private stage!: StageData;
   private store!: SaveStore;
+  private story: StoryData | null = null;
+  private dialog!: Dialog;
+  /** 途中とボスの会話は1回だけ出す */
+  private midShown = false;
+  private bossShown = false;
   private save!: SaveData;
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private spotGfx!: Phaser.GameObjects.Graphics;
@@ -114,11 +120,14 @@ export class BattleScene extends Phaser.Scene {
     this.chimneyT = 0;
     this.paused = false;
     this.resultShown = false;
+    this.midShown = false;
+    this.bossShown = false;
   }
 
   create(): void {
     const stage = (this.stage = stageById(this.startData.stageId ?? '') ?? STAGES[0]);
     this.practice = stage.id === PRACTICE_STAGE.id;
+    this.story = STORIES[stage.id] ?? null;
     const th = stage.theme;
     // セーブから家の強化と解放したとうを持ってくる。このステージのとうは「見た」ことにする
     this.store = new SaveStore();
@@ -132,6 +141,7 @@ export class BattleScene extends Phaser.Scene {
       home: homeBonus(this.save, GAME_DATA.home),
       towers: availableTowers(stage, this.save),
       companion: this.save.friend,
+      extra: this.story?.mid?.extra ? { wave: this.story.mid.wave, kinds: this.story.mid.extra } : undefined,
     });
     this.leaf = [hex(th.leaf[0]), hex(th.leaf[1])];
     this.terrShown = this.world.territory;
@@ -167,6 +177,8 @@ export class BattleScene extends Phaser.Scene {
     this.joystick = new Joystick(this);
     this.toUi(this.joystick.gfx);
     this.overlay = new Overlay();
+    this.dialog = new Dialog(SPEAKERS);
+    this.dialog.hide();
     this.overlay.hide();
     this.overlay.callBtn.textContent = TEXT.callNow;
     this.overlay.callBtn.onclick = () => this.world.callNow();
@@ -185,6 +197,7 @@ export class BattleScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this);
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.onHidden, this);
       for (const p of this.popups) p.text.destroy();
+      this.dialog.hide();
     });
 
     const p = this.world.player;
@@ -192,6 +205,7 @@ export class BattleScene extends Phaser.Scene {
     this.camY = p.y;
     this.updateCamera(1);
     this.hud.showBanner(stage.name);
+    if (this.story) this.talk(this.story.start);
 
     // 自動テストやデバッグ用に外から覗けるようにしておく
     (window as unknown as { __mori: unknown }).__mori = { scene: this, world: this.world };
@@ -200,7 +214,7 @@ export class BattleScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     const dt = Math.min(0.05, delta / 1000);
     const w = this.world;
-    const running = !this.paused && !this.overlay.visible && w.outcome === 'playing';
+    const running = !this.paused && !this.overlay.visible && !this.dialog.visible && w.outcome === 'playing';
     if (running) {
       w.input = this.readInput();
       w.step(dt);
@@ -210,9 +224,11 @@ export class BattleScene extends Phaser.Scene {
     if (w.outcome !== 'playing' && !this.resultShown) {
       this.resultShown = true;
       this.joystick.release();
-      this.time.delayedCall(900, () => this.showResult());
+      // クリアしたら、物語の会話のあとで結果を出す
+      const clear = w.outcome === 'won' ? this.story?.clear : undefined;
+      this.time.delayedCall(900, () => (clear ? this.talk(clear, () => this.showResult()) : this.showResult()));
     }
-    this.overlay.pauseBtn.classList.toggle('hide', w.outcome !== 'playing' || this.overlay.visible);
+    this.overlay.pauseBtn.classList.toggle('hide', w.outcome !== 'playing' || this.overlay.visible || this.dialog.visible);
     this.overlay.callBtn.classList.toggle('hide', !(running && w.phase === 'prep'));
     this.updateFriendButton(running);
     const fxDt = running ? dt : 0;
@@ -222,7 +238,7 @@ export class BattleScene extends Phaser.Scene {
     this.updateEffects(fxDt);
     this.render(fxDt);
     this.weather.update(dt);
-    const label = this.practice ? fmt(TEXT.practiceLabel, { diff: w.diff.name }) : fmt(TEXT.stageLabel, { n: 1, diff: w.diff.name });
+    const label = this.stageLabel(w.diff.name);
     this.hud.update(w, fxDt, (x, y) => this.toScreen(x, y), label);
     this.joystick.draw();
     this.updateCamera(dt);
@@ -244,6 +260,19 @@ export class BattleScene extends Phaser.Scene {
     if (t) {
       this.tintGfx.fillStyle(hex(t.color), t.alpha);
       this.tintGfx.fillRect(0, 0, w, h);
+    }
+    // 霧：あらた（画面のほぼ真ん中）から離れるほど白くかすむ。輪を重ねて、少しずつ濃くする
+    const mist = this.world.stage.theme.mist;
+    if (mist) {
+      const g = this.tintGfx;
+      const r0 = Math.min(w, h) * mist;
+      const r1 = Math.hypot(w, h) / 2 + 20;
+      const steps = 10;
+      const band = (r1 - r0) / steps;
+      for (let i = 0; i < steps; i++) {
+        g.lineStyle(band + 1, 0xdfe8dc, Math.min(0.8, 0.14 + i * 0.07));
+        g.strokeCircle(w / 2, h / 2, r0 + band * (i + 0.5));
+      }
     }
     this.updateCamera(1);
   }
@@ -280,6 +309,19 @@ export class BattleScene extends Phaser.Scene {
         { label: TEXT.quit, secondary: true, onTap: () => this.goHome() },
       ],
     });
+  }
+
+  /** 左上に出すステージの名前（例「ステージ 3・ふつう」） */
+  private stageLabel(diff: string): string {
+    if (this.practice) return fmt(TEXT.practiceLabel, { diff });
+    if (this.stage.waves.endless) return fmt(TEXT.endlessLabel, { diff });
+    return fmt(TEXT.stageLabel, { n: STAGES.findIndex((x) => x.id === this.stage.id) + 1, diff });
+  }
+
+  /** 会話を出す（出ている間は戦場が止まる）。指が画面に残っていたら離した扱いにする */
+  private talk(lines: StoryLine[], onDone: () => void = () => {}): void {
+    this.joystick.release();
+    this.dialog.show(lines, onDone);
   }
 
   /** 仲間への命令ボタン：上にいまの様子を小さく、下に押すとどうなるかを大きく出す */
@@ -357,19 +399,35 @@ export class BattleScene extends Phaser.Scene {
     const retry = { label: TEXT.retry, onTap: () => this.scene.restart(this.startData) };
     const home = { label: TEXT.goHome, onTap: () => this.goHome() };
     if (w.outcome === 'won') {
-      // なつこの愛をもらい、記録と一緒にすぐ保存する
+      // なつこの愛をもらい、物語で仲間が加わり、記録と一緒にすぐ保存する
       const r = clearStage(this.save, GAME_DATA.home, this.stage, w.stars, w.difficulty);
+      const joins = this.story?.joins;
+      const joined = joins ? joinFriend(this.save, joins) : false;
       this.store.save(this.save);
+      const last = STAGES[STAGES.length - 1].id === this.stage.id;
+      const lines = [
+        last ? TEXT.allClearLead : TEXT.clearLead,
+        `${fmt(TEXT.houseHp, { hp: w.house.hp, max: w.house.maxHp })}　${fmt(TEXT.level, { lv: w.level })}`,
+        `💗 ${fmt(r.first ? TEXT.rewardFirst : TEXT.reward, { n: r.love })}`,
+      ];
+      if (joined && joins) {
+        const c = GAME_DATA.companions.kinds[joins];
+        lines.push(fmt(TEXT.friendJoined, { icon: c.icon, name: c.name }));
+      }
       this.overlay.showResult({
-        title: TEXT.clear,
+        title: last ? TEXT.allClear : TEXT.clear,
         stars: w.stars,
-        lines: [
-          TEXT.clearLead,
-          `${fmt(TEXT.houseHp, { hp: w.house.hp, max: w.house.maxHp })}　${fmt(TEXT.level, { lv: w.level })}`,
-          `💗 ${fmt(r.first ? TEXT.rewardFirst : TEXT.reward, { n: r.love })}`,
-        ],
+        lines,
         buttons: [home, { ...retry, secondary: true }],
       });
+    } else if (this.stage.waves.endless) {
+      // むげんモードは、おうちが壊されたら終わり。たどりついたウェーブで記録となつこの愛
+      const r = endEndless(this.save, GAME_DATA.home, w.wave, w.difficulty);
+      this.store.save(this.save);
+      const lines = [fmt(TEXT.endlessLead, { n: w.wave })];
+      if (r.record) lines.push(TEXT.endlessRecord);
+      if (r.love > 0) lines.push(`💗 ${fmt(TEXT.reward, { n: r.love })}`);
+      this.overlay.showResult({ title: TEXT.endlessEnd, stars: 0, lines, buttons: [home, { ...retry, secondary: true }] });
     } else {
       this.overlay.showResult({
         title: TEXT.lose,
@@ -713,6 +771,10 @@ export class BattleScene extends Phaser.Scene {
       case 'spawn':
         if (e.enemy.kind === 'boss') this.hud.showBanner(TEXT.bossCame);
         if (e.enemy.kind === 'maou') this.hud.showBanner(TEXT.maouCame);
+        if (e.enemy.stats.boss && this.story?.boss && !this.bossShown) {
+          this.bossShown = true;
+          this.talk(this.story.boss);
+        }
         break;
       case 'summon':
         fx.smoke(e.enemy.x, e.enemy.y - e.enemy.r, 10, 14, 0xb07ae0, 90);
@@ -792,6 +854,10 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'wave':
         this.hud.showBanner(e.last ? TEXT.lastWave : fmt(TEXT.wave, { n: e.n }));
+        if (this.story?.mid && e.n === this.story.mid.wave && !this.midShown) {
+          this.midShown = true;
+          this.talk(this.story.mid.lines);
+        }
         break;
       case 'waveClear':
         this.hud.showBanner(TEXT.waveClear);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { COMPANION_KINDS, GAME_DATA, STAGES, type CompanionKind, type StageData } from '../src/data/gameData';
-import { homeBonus } from '../src/systems/Home';
+import { homeBonus, joinFriend } from '../src/systems/Home';
 import { newSave, parseSave } from '../src/systems/Save';
 import { World } from '../src/systems/World';
 import { runBot } from './bot';
@@ -133,10 +133,26 @@ describe('得意なこと', () => {
 });
 
 describe('仲間のセーブ', () => {
-  it('仲間のいなかったころのセーブでも、3人とも仲間で、ももを連れていく', () => {
+  it('仲間のいなかったころのセーブは、新しいセーブと同じく仲間なしで始まる（物語で加わる）', () => {
     const s = parseSave(JSON.stringify({ love: 3 }));
+    expect(s.friends).toEqual([]);
+    expect(s.friend).toBeNull();
+  });
+
+  it('3人とも仲間のセーブ（マイルストーン6のころ）は、そのまま3人とも使える', () => {
+    const s = parseSave(JSON.stringify({ friends: COMPANION_KINDS, friend: 'goro' }));
     expect(s.friends).toEqual(COMPANION_KINDS);
+    expect(s.friend).toBe('goro');
+  });
+
+  it('物語で仲間が加わると、連れていく仲間がいなければその仲間を連れていく', () => {
+    const s = newSave();
+    expect(joinFriend(s, 'momo')).toBe(true);
     expect(s.friend).toBe('momo');
+    expect(joinFriend(s, 'goro')).toBe(true);
+    expect(s.friend).toBe('momo');
+    expect(joinFriend(s, 'goro')).toBe(false);
+    expect(s.friends).toEqual(['momo', 'goro']);
   });
 
   it('知らない仲間や、仲間になっていない仲間は選ばれない', () => {

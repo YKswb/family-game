@@ -1,0 +1,63 @@
+{
+  "id": "stage4",
+  "name": "夕焼けの森",
+  "tip": "よろいの 騎士は 大ほうに よわいよ",
+  "towers": ["arrow", "cannon", "ice"],
+  "reward": 30,
+  "theme": {
+    "background": "#4a3a2a",
+    "ground": "#8fb35a",
+    "tuft": ["#7f9f4c", "#a9c46a"],
+    "flower": ["#ffb347", "#ff7ab0", "#ffffff"],
+    "leaf": ["#3b7a3a", "#6a9a45"],
+    "clearing": "#ecc88c",
+    "fog": "#32141e",
+    "tint": { "color": "#ff6e32", "alpha": 0.13 },
+    "weather": { "type": "leaves", "colors": ["#ffb347", "#ff8a5a"], "count": 10, "size": 6 }
+  },
+  "width": 1400,
+  "height": 1400,
+  "house": { "x": 700, "y": 700, "r": 58 },
+  "player": { "x": 700, "y": 795 },
+  "territory": [320, 440, 580],
+  "trees": {
+    "count": 260,
+    "minFromHouse": 250,
+    "spacing": 52,
+    "margin": 40,
+    "keepClear": [[300, 0], [-300, 0], [0, 320], [0, -320], [0, 280], [0, 400]],
+    "keepClearRadius": 60
+  },
+  "spots": [
+    { "type": "tower", "dx": -100, "dy": -100 },
+    { "type": "tower", "dx": 100, "dy": -100 },
+    { "type": "tower", "dx": -100, "dy": 100 },
+    { "type": "tower", "dx": 100, "dy": 100 },
+    { "type": "axe", "dx": 150, "dy": 0 },
+    { "type": "bag", "dx": -150, "dy": 0 },
+    { "type": "land", "dx": 0, "dy": 280, "moves": [[0,400]] },
+    { "type": "tower", "dx": 300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": -300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": 0, "dy": -320, "territory": 2 },
+    { "type": "tower", "dx": 0, "dy": 320, "territory": 2 }
+  ],
+  "waves": {
+    "count": 8,
+    "base": 5,
+    "grow": 3,
+    "minCount": 3,
+    "pool": [
+      { "kind": "slime", "weight": 3, "from": 1 },
+      { "kind": "goblin", "weight": 2, "from": 1 },
+      { "kind": "bat", "weight": 1, "from": 2 },
+      { "kind": "wolf", "weight": 1, "from": 2 },
+      { "kind": "knight", "weight": 1, "from": 3 }
+    ],
+    "boss": null,
+    "directions": [{ "from": 2, "count": 2 }],
+    "hpGrowth": 0.1,
+    "stageHpBonus": 0.12,
+    "bossHpBonus": 0.75,
+    "spawnInterval": { "start": 1, "perWave": 0.05, "stageBonus": 0.12, "min": 0.35 }
+  }
+}

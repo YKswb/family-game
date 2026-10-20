@@ -118,7 +118,7 @@ describe('とうの解放', () => {
     markSeen(s, PRACTICE_STAGE);
     expect(unlockable(s, home).map((u) => u.tower)).toContain('lightning');
     expect(unlockTower(s, home, 'lightning')).toBe(true);
-    expect(availableTowers(STAGES[0], s)).toEqual(['arrow', 'cannon', 'ice', 'lightning']);
+    expect(availableTowers(STAGES[0], s)).toEqual(['arrow', 'lightning']);
   });
 });
 

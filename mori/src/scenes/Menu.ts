@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { GAME_DATA, SELECTABLE_STAGES, STAGES, type TowerKind } from '../data/gameData';
-import { buyUpgrade, refundAll, unlockTower } from '../systems/Home';
+import { ENDLESS_STAGE, ENDLESS_UNLOCK_AFTER, GAME_DATA, STAGES, type TowerKind } from '../data/gameData';
+import { buyUpgrade, endlessOpen, refundAll, stageOpen, unlockTower } from '../systems/Home';
 import { Random } from '../systems/Random';
 import { SaveStore, newSave, type SaveData } from '../systems/Save';
 import { DPR, TEXT, hex, screenSize } from '../ui/Display';
@@ -123,7 +123,8 @@ export class MenuScene extends Phaser.Scene {
     }
     this.menus.showStages(
       this.save,
-      SELECTABLE_STAGES,
+      STAGES,
+      STAGES.map((_, i) => stageOpen(this.save, STAGES, i)),
       GAME_DATA,
       {
         onFriend: (kind) => {
@@ -142,6 +143,7 @@ export class MenuScene extends Phaser.Scene {
         },
         onBack: () => this.show('home'),
       },
+      { stage: ENDLESS_STAGE, open: endlessOpen(this.save, STAGES, ENDLESS_UNLOCK_AFTER) },
     );
   }
 

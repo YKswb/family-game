@@ -1,0 +1,71 @@
+{
+  "id": "endless",
+  "name": "むげんモード",
+  "tip": "どこまで 守れるかな？ 5ウェーブごとに ボス、10ウェーブごとに おゆきちが 来るよ",
+  "towers": ["arrow", "cannon", "ice"],
+  "reward": 0,
+  "theme": {
+    "background": "#2a3a5a",
+    "ground": "#7fb35f",
+    "tuft": ["#6fa352", "#93c56d"],
+    "flower": ["#ffffff", "#ffd84d", "#b8d8ff"],
+    "leaf": ["#2f8a5a", "#5ab07a"],
+    "clearing": "#e0d29a",
+    "fog": "#0e1a28",
+    "tint": { "color": "#4a3aa0", "alpha": 0.08 },
+    "weather": { "type": "fireflies", "colors": ["#fff3a0", "#c8e6ff"], "count": 12, "size": 5 }
+  },
+  "width": 1400,
+  "height": 1400,
+  "house": { "x": 700, "y": 700, "r": 58 },
+  "player": { "x": 700, "y": 795 },
+  "territory": [320, 440, 580],
+  "trees": {
+    "count": 260,
+    "minFromHouse": 250,
+    "spacing": 52,
+    "margin": 40,
+    "keepClear": [[300, 0], [-300, 0], [0, 320], [0, -320], [0, 280], [0, 400]],
+    "keepClearRadius": 60
+  },
+  "spots": [
+    { "type": "tower", "dx": -100, "dy": -100 },
+    { "type": "tower", "dx": 100, "dy": -100 },
+    { "type": "tower", "dx": -100, "dy": 100 },
+    { "type": "tower", "dx": 100, "dy": 100 },
+    { "type": "axe", "dx": 150, "dy": 0 },
+    { "type": "bag", "dx": -150, "dy": 0 },
+    { "type": "land", "dx": 0, "dy": 280, "moves": [[0,400]] },
+    { "type": "tower", "dx": 300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": -300, "dy": 0, "territory": 1 },
+    { "type": "tower", "dx": 0, "dy": -320, "territory": 2 },
+    { "type": "tower", "dx": 0, "dy": 320, "territory": 2 }
+  ],
+  "waves": {
+    "count": 0,
+    "endless": true,
+    "bossEvery": 5,
+    "maouEvery": 10,
+    "base": 5,
+    "grow": 3,
+    "minCount": 3,
+    "pool": [
+      { "kind": "slime", "weight": 3, "from": 1 },
+      { "kind": "goblin", "weight": 2, "from": 2 },
+      { "kind": "bat", "weight": 2, "from": 3 },
+      { "kind": "wolf", "weight": 2, "from": 4 },
+      { "kind": "knight", "weight": 2, "from": 5 },
+      { "kind": "splitter", "weight": 2, "from": 6 },
+      { "kind": "shield", "weight": 1, "from": 7 },
+      { "kind": "mole", "weight": 1, "from": 8 },
+      { "kind": "lumberjack", "weight": 1, "from": 9 },
+      { "kind": "healer", "weight": 1, "from": 11 }
+    ],
+    "boss": null,
+    "directions": [{ "from": 4, "count": 2 }, { "from": 12, "count": 3 }],
+    "hpGrowth": 0.5,
+    "stageHpBonus": 0.16,
+    "bossHpBonus": 0.5,
+    "spawnInterval": { "start": 1, "perWave": 0.05, "stageBonus": 0.16, "min": 0.35 }
+  }
+}

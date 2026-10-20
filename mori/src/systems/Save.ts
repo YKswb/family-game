@@ -27,7 +27,7 @@ export interface SaveData {
   stages: Record<string, StageRecord>;
   /** 最後に選んだ難易度 */
   difficulty: number;
-  /** 仲間になった動物（マイルストーン7で物語に合わせて増えるようにする。それまでは3人とも） */
+  /** 仲間になった動物（物語の中で1人ずつ加わる） */
   friends: CompanionKind[];
   /** 連れていく仲間 */
   friend: CompanionKind | null;
@@ -44,8 +44,9 @@ export function newSave(): SaveData {
     seen: [],
     stages: {},
     difficulty: 1,
-    friends: [...COMPANION_KINDS],
-    friend: COMPANION_KINDS[0],
+    // はじめは仲間がいない。物語の中で1人ずつ加わる
+    friends: [],
+    friend: null,
     endlessBest: 0,
   };
 }
@@ -90,11 +91,10 @@ export function parseSave(raw: string | null): SaveData {
     }
   }
   if (isNum(o.difficulty) && [0, 1, 2].includes(o.difficulty)) s.difficulty = o.difficulty;
-  // 前のセーブ（仲間がいなかったころ）には friends がないので、そのときは新しいセーブの仲間のままにする
+  // 仲間がいなかったころのセーブには friends がないので、そのときは新しいセーブと同じく仲間なしで始める
   if (Array.isArray(o.friends)) s.friends = friendList(o.friends);
-  if (o.friend === null) s.friend = null;
-  else if (COMPANION_KINDS.includes(o.friend as CompanionKind) && s.friends.includes(o.friend as CompanionKind)) s.friend = o.friend as CompanionKind;
-  if (s.friend && !s.friends.includes(s.friend)) s.friend = s.friends[0] ?? null;
+  if (COMPANION_KINDS.includes(o.friend as CompanionKind) && s.friends.includes(o.friend as CompanionKind)) s.friend = o.friend as CompanionKind;
+  else if (o.friend !== null) s.friend = s.friends[0] ?? null;
   if (isNum(o.endlessBest) && o.endlessBest >= 0) s.endlessBest = Math.floor(o.endlessBest);
   return s;
 }

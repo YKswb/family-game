@@ -2,7 +2,7 @@
   "id": "stage1",
   "name": "はじまりの森",
   "tip": "",
-  "towers": ["arrow", "cannon", "ice"],
+  "towers": ["arrow"],
   "reward": 12,
   "theme": {
     "background": "#3d7431",
@@ -41,7 +41,7 @@
     { "type": "tower", "dx": 0, "dy": 320, "territory": 2 }
   ],
   "waves": {
-    "count": 5,
+    "count": 6,
     "base": 3,
     "grow": 2,
     "minCount": 3,

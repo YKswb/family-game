@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRACTICE_STAGE, STAGES } from '../src/data/gameData';
+import { ENDLESS_STAGE, PRACTICE_STAGE, STAGES, STORIES } from '../src/data/gameData';
 import { World } from '../src/systems/World';
 import { runBot } from './bot';
 
@@ -22,6 +22,30 @@ describe('ステージ1の自動プレイ（ボットが主人公を動かす）
     const s = runBot(w);
     expect(s.broken).toBeNull();
     expect(w.outcome).toBe('won');
+  });
+});
+
+describe('全ステージの自動プレイ（家の強化と仲間なし）', () => {
+  it.each(STAGES.map((s, i) => [i + 1, s] as const))('ステージ%i：ふつうで最後まで守りきれる', (_n, stage) => {
+    const mid = STORIES[stage.id].mid;
+    const w = new World(stage, {
+      seed: 1,
+      difficulty: 1,
+      towers: stage.towers,
+      extra: mid?.extra ? { wave: mid.wave, kinds: mid.extra } : undefined,
+    });
+    const s = runBot(w, 1200);
+    expect(s.broken).toBeNull();
+    expect(s.overCapacity).toBe(false);
+    expect(w.outcome).toBe('won');
+  });
+
+  it('むげんモード：エラーなく進み、いつかは終わる', () => {
+    const w = new World(ENDLESS_STAGE, { seed: 1, difficulty: 1, towers: ENDLESS_STAGE.towers });
+    const s = runBot(w, 3600);
+    expect(s.broken).toBeNull();
+    expect(w.outcome).toBe('lost');
+    expect(w.wave).toBeGreaterThanOrEqual(10);
   });
 });
 

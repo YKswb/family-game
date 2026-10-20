@@ -3,7 +3,8 @@
     "difficultyMul": [0.6, 1, 1.5],
     "perStar": 0.2,
     "replayMul": 0.25,
-    "crownMul": 0.5
+    "crownMul": 0.5,
+    "endlessPerWave": 1
   },
   "groups": [
     { "id": "keeper", "icon": "🧒", "name": "あらた" },
@@ -25,6 +26,8 @@
     { "id": "friendSpeed", "group": "friend", "icon": "💨", "name": "仲間の 足", "desc": "仲間の 動く はやさ と こうげきの はやさ +10%", "costs": [10, 20, 35], "stat": "friendSpeed", "add": 0.1 }
   ],
   "unlocks": [
+    { "tower": "cannon", "cost": 15 },
+    { "tower": "ice", "cost": 20 },
     { "tower": "lightning", "cost": 40 },
     { "tower": "heal", "cost": 40 }
   ]

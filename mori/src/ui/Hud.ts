@@ -107,7 +107,9 @@ export class Hud {
       .setText(
         world.phase === 'prep'
           ? fmt(world.wave === 0 ? TEXT.prepFirst : TEXT.prepNext, { n: Math.max(0, Math.ceil(world.timer)) })
-          : fmt(TEXT.waveOf, { n: world.wave, max: wd.count }),
+          : wd.endless
+            ? fmt(TEXT.wave, { n: world.wave })
+            : fmt(TEXT.waveOf, { n: world.wave, max: wd.count }),
       )
       .setPosition(cx, ty + 26 * u);
     const bw = 170 * u;

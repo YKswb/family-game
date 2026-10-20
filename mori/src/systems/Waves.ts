@@ -23,8 +23,16 @@ export function waveList(w: WaveData, n: number, diff: Difficulty, rng: Random):
     const j = Math.floor(rng.next() * (i + 1));
     [list[i], list[j]] = [list[j], list[i]];
   }
-  if (n === w.count && w.boss) list.push(w.boss);
+  const boss = w.endless ? endlessBoss(w, n) : n === w.count ? w.boss : null;
+  if (boss) list.push(boss);
   return list;
+}
+
+/** むげんモードで、ウェーブ n の最後に出る大将（おゆきちが出るウェーブはボスより優先） */
+export function endlessBoss(w: WaveData, n: number): EnemyKind | null {
+  if (w.maouEvery && n % w.maouEvery === 0) return 'maou';
+  if (w.bossEvery && n % w.bossEvery === 0) return 'boss';
+  return null;
 }
 
 /** ウェーブ n で敵が来る方向の数 */

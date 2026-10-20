@@ -1,4 +1,4 @@
-import { TOWER_KINDS, type HomeData, type StageData, type TowerKind } from '../data/gameData';
+import { TOWER_KINDS, type CompanionKind, type HomeData, type StageData, type TowerKind } from '../data/gameData';
 import type { SaveData } from './Save';
 
 /** まもりびとの家の強化を合わせた、ステージに持っていく力 */
@@ -89,6 +89,40 @@ export function availableTowers(stage: StageData, s: SaveData): TowerKind[] {
 /** ステージを始めたときに、そのステージのとうを「見た」ことにする */
 export function markSeen(s: SaveData, stage: StageData): void {
   for (const k of stage.towers) if (!s.seen.includes(k)) s.seen.push(k);
+}
+
+/** ステージを遊べるか：最初のステージはいつでも、ほかは1つ前のステージをクリアしていたら */
+export function stageOpen(s: SaveData, stages: StageData[], index: number): boolean {
+  if (index <= 0) return true;
+  const prev = stages[index - 1];
+  return !!prev && (s.stages[prev.id]?.clears ?? 0) > 0;
+}
+
+/** むげんモードを遊べるか（stages の unlockAfter 番目までクリアしていたら） */
+export function endlessOpen(s: SaveData, stages: StageData[], unlockAfter: number): boolean {
+  const st = stages[unlockAfter - 1];
+  return !!st && (s.stages[st.id]?.clears ?? 0) > 0;
+}
+
+/** 物語で仲間が加わる。連れていく仲間がまだいなければ、その仲間を連れていく。新しく加わったら true */
+export function joinFriend(s: SaveData, kind: CompanionKind): boolean {
+  if (s.friends.includes(kind)) return false;
+  s.friends.push(kind);
+  if (!s.friend) s.friend = kind;
+  return true;
+}
+
+/**
+ * むげんモードが終わったとき：たどりついたウェーブに応じて、少しだけなつこの愛をもらう（難易度を掛ける）。
+ * 最高記録も書き換える。記録を更新したら record が true
+ */
+export function endEndless(s: SaveData, data: HomeData, wave: number, difficulty: number): { love: number; record: boolean } {
+  const cleared = Math.max(0, wave - 1);
+  const love = Math.round(cleared * data.rewards.endlessPerWave * (data.rewards.difficultyMul[difficulty] ?? 1));
+  const record = wave > s.endlessBest;
+  if (record) s.endlessBest = wave;
+  s.love += love;
+  return { love, record };
 }
 
 export interface Reward {

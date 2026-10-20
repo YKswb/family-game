@@ -1,0 +1,10 @@
+{
+  "arata": { "name": "あらた", "icon": "🧒", "color": "#2f6fd6" },
+  "rei": { "name": "れい", "icon": "🧚", "color": "#3aa860" },
+  "oyukichi": { "name": "おゆきち", "icon": "😈", "color": "#6a3a9a" },
+  "villager": { "name": "村の人", "icon": "👵", "color": "#b07a3a" },
+  "boss": { "name": "おゆきちの手下", "icon": "👹", "color": "#c0405a" },
+  "momo": { "name": "もも", "icon": "🐰", "color": "#e07a9a" },
+  "goro": { "name": "ごろう", "icon": "🐻", "color": "#8a5a2a" },
+  "hosuke": { "name": "ほうすけ", "icon": "🦉", "color": "#7a6a4a" }
+}

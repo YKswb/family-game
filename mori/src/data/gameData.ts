@@ -4,8 +4,25 @@ import difficultyJson from './difficulty.json';
 import enemiesJson from './enemies.json';
 import homeJson from './home.json';
 import playerJson from './player.json';
+import endlessJson from './stages/endless.json';
 import practiceJson from './stages/practice.json';
 import stage1Json from './stages/stage1.json';
+import stage2Json from './stages/stage2.json';
+import stage3Json from './stages/stage3.json';
+import stage4Json from './stages/stage4.json';
+import stage5Json from './stages/stage5.json';
+import stage6Json from './stages/stage6.json';
+import stage7Json from './stages/stage7.json';
+import stage8Json from './stages/stage8.json';
+import speakersJson from './story/speakers.json';
+import story1Json from './story/stage1.json';
+import story2Json from './story/stage2.json';
+import story3Json from './story/stage3.json';
+import story4Json from './story/stage4.json';
+import story5Json from './story/stage5.json';
+import story6Json from './story/stage6.json';
+import story7Json from './story/stage7.json';
+import story8Json from './story/stage8.json';
 import towersJson from './towers.json';
 import treesJson from './trees.json';
 import upgradesJson from './upgrades.json';
@@ -291,6 +308,35 @@ export interface CompanionData {
   kinds: Record<CompanionKind, CompanionStats>;
 }
 
+/** 会話で話す人 */
+export type Speaker = 'arata' | 'rei' | 'oyukichi' | 'villager' | 'boss' | CompanionKind;
+
+export interface SpeakerInfo {
+  name: string;
+  icon: string;
+  /** 名前の札の色 */
+  color: string;
+}
+
+export interface StoryLine {
+  who: Speaker;
+  text: string;
+}
+
+/** ステージの会話（各3行くらいまで）。会話の間はゲームが止まり、タップで進む */
+export interface StoryData {
+  /** ステージの始まり */
+  start: StoryLine[];
+  /** このウェーブが始まるときの会話。extra の敵をそのウェーブに足す（おゆきちが呼ぶ） */
+  mid?: { wave: number; lines: StoryLine[]; extra?: EnemyKind[] };
+  /** ボス（またはおゆきち）が出たとき */
+  boss?: StoryLine[];
+  /** クリアしたとき */
+  clear: StoryLine[];
+  /** クリアしたあとで仲間になる動物 */
+  joins?: CompanionKind;
+}
+
 /** まもりびとの家での強化の効き目 */
 export type HomeStat =
   | 'speed'
@@ -325,7 +371,7 @@ export interface HomeData {
    * クリアでもらえるなつこの愛。もとになる量はステージごと（StageData.reward）で、
    * 難易度の倍率と、★1つごとの上乗せを掛ける。2回目からは replayMul 倍。むずかしいで初めてクリアすると crownMul 倍を足す
    */
-  rewards: { difficultyMul: number[]; perStar: number; replayMul: number; crownMul: number };
+  rewards: { difficultyMul: number[]; perStar: number; replayMul: number; crownMul: number; endlessPerWave: number };
   groups: { id: string; icon: string; name: string }[];
   upgrades: HomeUpgrade[];
   /** ステージで見たとうを、ここで解放するとどのステージでも使える */
@@ -348,6 +394,8 @@ export interface StageTheme {
   night?: boolean;
   /** 雪：木やとうの屋根に雪が積もる */
   snow?: boolean;
+  /** 霧：画面の真ん中から、短い辺のこの割合より外を白くかすませる（見える範囲がせまくなる） */
+  mist?: number;
 }
 
 export interface SpotSpec {
@@ -374,6 +422,10 @@ export interface WaveData {
   hpGrowth: number;
   stageHpBonus: number;
   bossHpBonus: number;
+  /** むげんモード：ウェーブが終わらない。bossEvery ごとにボス、maouEvery ごとにおゆきちが出る */
+  endless?: boolean;
+  bossEvery?: number;
+  maouEvery?: number;
   spawnInterval: { start: number; perWave: number; stageBonus: number; min: number };
 }
 
@@ -433,14 +485,32 @@ export const GAME_DATA: GameData = {
 };
 
 // JSON の配列は TypeScript では組（[number, number]）と見なされないので、unknown を経由する
-export const STAGES: StageData[] = [stage1Json as unknown as StageData];
+export const STAGES: StageData[] = [stage1Json, stage2Json, stage3Json, stage4Json, stage5Json, stage6Json, stage7Json, stage8Json].map(
+  (s) => s as unknown as StageData,
+);
 
 /** 新しいとうと敵を試すための練習の森（ステージ選びの最後に出す） */
 export const PRACTICE_STAGE = practiceJson as unknown as StageData;
 
-/** ステージ選びに並べる順 */
-export const SELECTABLE_STAGES: StageData[] = [...STAGES, PRACTICE_STAGE];
+/** むげんモード（ステージ4をクリアすると遊べる） */
+export const ENDLESS_STAGE = endlessJson as unknown as StageData;
+/** むげんモードが遊べるようになる、クリアの必要なステージの数 */
+export const ENDLESS_UNLOCK_AFTER = 4;
 
 export function stageById(id: string): StageData | undefined {
-  return SELECTABLE_STAGES.find((s) => s.id === id);
+  return [...STAGES, ENDLESS_STAGE, PRACTICE_STAGE].find((s) => s.id === id);
 }
+
+export const SPEAKERS = speakersJson as Record<Speaker, SpeakerInfo>;
+
+/** ステージごとの会話（ステージの id で引く） */
+export const STORIES: Record<string, StoryData> = {
+  stage1: story1Json as StoryData,
+  stage2: story2Json as StoryData,
+  stage3: story3Json as StoryData,
+  stage4: story4Json as StoryData,
+  stage5: story5Json as StoryData,
+  stage6: story6Json as StoryData,
+  stage7: story7Json as StoryData,
+  stage8: story8Json as StoryData,
+};
