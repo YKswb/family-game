@@ -266,8 +266,11 @@ export interface HomeUpgrade {
 }
 
 export interface HomeData {
-  /** クリアでもらえるなつこの愛 */
-  rewards: { firstClear: number; firstClearPerStar: number; replay: number; replayPerStar: number; crown: number };
+  /**
+   * クリアでもらえるなつこの愛。もとになる量はステージごと（StageData.reward）で、
+   * 難易度の倍率と、★1つごとの上乗せを掛ける。2回目からは replayMul 倍。むずかしいで初めてクリアすると crownMul 倍を足す
+   */
+  rewards: { difficultyMul: number[]; perStar: number; replayMul: number; crownMul: number };
   groups: { id: string; icon: string; name: string }[];
   upgrades: HomeUpgrade[];
   /** ステージで見たとうを、ここで解放するとどのステージでも使える */
@@ -327,6 +330,8 @@ export interface StageData {
   tip: string;
   /** このステージで建てられるとうの種類（建てたときの選択肢の順） */
   towers: TowerKind[];
+  /** はじめてクリアしたときのなつこの愛のもと（ふつう・★0 のとき）。むずかしいステージほど多くする */
+  reward: number;
   theme: StageTheme;
   width: number;
   height: number;

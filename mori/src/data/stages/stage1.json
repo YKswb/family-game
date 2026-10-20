@@ -3,6 +3,7 @@
   "name": "はじまりの森",
   "tip": "",
   "towers": ["arrow", "cannon", "ice"],
+  "reward": 12,
   "theme": {
     "background": "#3d7431",
     "ground": "#78c35f",

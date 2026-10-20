@@ -94,15 +94,25 @@ export interface Reward {
   crown: boolean;
 }
 
-/** クリアしたときにもらえるなつこの愛（はじめてのクリアは多め）。記録も書き換える */
-export function clearStage(s: SaveData, data: HomeData, stageId: string, stars: number, difficulty: number): Reward {
+/** クリアでもらえるなつこの愛の量（記録は変えない） */
+export function rewardFor(data: HomeData, base: number, stars: number, difficulty: number, first: boolean, crown: boolean): number {
   const r = data.rewards;
-  const rec = s.stages[stageId] ?? { stars: 0, crown: false, clears: 0 };
+  const full = base * (r.difficultyMul[difficulty] ?? 1) * (1 + r.perStar * stars);
+  let love = first ? full : full * r.replayMul;
+  if (crown) love += base * r.crownMul;
+  return Math.max(1, Math.round(love));
+}
+
+/**
+ * クリアしたときにもらえるなつこの愛。ステージのもとの量に、難易度と★を掛ける（はじめてのクリアは多め）。
+ * 記録も書き換える
+ */
+export function clearStage(s: SaveData, data: HomeData, stage: Pick<StageData, 'id' | 'reward'>, stars: number, difficulty: number): Reward {
+  const rec = s.stages[stage.id] ?? { stars: 0, crown: false, clears: 0 };
   const first = rec.clears === 0;
   const crown = difficulty === 2 && !rec.crown;
-  let love = first ? r.firstClear + r.firstClearPerStar * stars : r.replay + r.replayPerStar * stars;
-  if (crown) love += r.crown;
-  s.stages[stageId] = { stars: Math.max(rec.stars, stars), crown: rec.crown || difficulty === 2, clears: rec.clears + 1 };
+  const love = rewardFor(data, stage.reward, stars, difficulty, first, crown);
+  s.stages[stage.id] = { stars: Math.max(rec.stars, stars), crown: rec.crown || difficulty === 2, clears: rec.clears + 1 };
   s.love += love;
   return { love, first, crown };
 }

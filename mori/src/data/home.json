@@ -1,10 +1,9 @@
 {
   "rewards": {
-    "firstClear": 30,
-    "firstClearPerStar": 10,
-    "replay": 8,
-    "replayPerStar": 3,
-    "crown": 20
+    "difficultyMul": [0.6, 1, 1.5],
+    "perStar": 0.2,
+    "replayMul": 0.25,
+    "crownMul": 0.5
   },
   "groups": [
     { "id": "keeper", "icon": "🧒", "name": "あらた" },

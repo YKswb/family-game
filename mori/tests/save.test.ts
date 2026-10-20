@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_DATA, PRACTICE_STAGE, STAGES } from '../src/data/gameData';
-import { availableTowers, buyUpgrade, clearStage, homeBonus, markSeen, nextCost, refundAll, unlockTower, unlockable } from '../src/systems/Home';
+import { availableTowers, buyUpgrade, clearStage, homeBonus, markSeen, nextCost, refundAll, rewardFor, unlockTower, unlockable } from '../src/systems/Home';
 import { SAVE_KEY, SaveStore, newSave, parseSave, type KeyValueStore } from '../src/systems/Save';
 import { World } from '../src/systems/World';
 
@@ -58,15 +58,30 @@ describe('セーブの読み書き', () => {
 describe('なつこの愛', () => {
   it('はじめてのクリアは多め、2回目からは少しだけ。むずかしいで初めてクリアすると王冠の分も', () => {
     const s = newSave();
-    const r1 = clearStage(s, home, 'stage1', 2, 1);
+    const stage = STAGES[0];
+    const r1 = clearStage(s, home, stage, 2, 1);
     expect(r1.first).toBe(true);
-    expect(r1.love).toBe(home.rewards.firstClear + home.rewards.firstClearPerStar * 2);
-    const r2 = clearStage(s, home, 'stage1', 3, 2);
+    expect(r1.love).toBe(Math.round(stage.reward * (1 + home.rewards.perStar * 2)));
+    const r2 = clearStage(s, home, stage, 3, 2);
     expect(r2.first).toBe(false);
     expect(r2.crown).toBe(true);
-    expect(r2.love).toBe(home.rewards.replay + home.rewards.replayPerStar * 3 + home.rewards.crown);
+    const full = stage.reward * home.rewards.difficultyMul[2] * (1 + home.rewards.perStar * 3);
+    expect(r2.love).toBe(Math.round(full * home.rewards.replayMul + stage.reward * home.rewards.crownMul));
     expect(s.stages.stage1).toEqual({ stars: 3, crown: true, clears: 2 });
     expect(s.love).toBe(r1.love + r2.love);
+  });
+
+  it('ステージ1（いちばんやさしい）は、ふつう★3の初クリアでも安い強化1〜2つ分にとどめる', () => {
+    const love = rewardFor(home, STAGES[0].reward, 3, 1, true, false);
+    const cheapest = Math.min(...home.upgrades.map((u) => u.costs[0]));
+    expect(love).toBeGreaterThanOrEqual(cheapest);
+    expect(love).toBeLessThan(cheapest * 3);
+  });
+
+  it('かんたんは少なめ、むずかしいは多め', () => {
+    const base = STAGES[0].reward;
+    expect(rewardFor(home, base, 3, 0, true, false)).toBeLessThan(rewardFor(home, base, 3, 1, true, false));
+    expect(rewardFor(home, base, 3, 2, true, false)).toBeGreaterThan(rewardFor(home, base, 3, 1, true, false));
   });
 
   it('強化を買うとなつこの愛が減り、ふりなおすと全部戻る', () => {

@@ -334,7 +334,7 @@ export class BattleScene extends Phaser.Scene {
     const home = { label: TEXT.goHome, onTap: () => this.goHome() };
     if (w.outcome === 'won') {
       // なつこの愛をもらい、記録と一緒にすぐ保存する
-      const r = clearStage(this.save, GAME_DATA.home, this.stage.id, w.stars, w.difficulty);
+      const r = clearStage(this.save, GAME_DATA.home, this.stage, w.stars, w.difficulty);
       this.store.save(this.save);
       this.overlay.showResult({
         title: TEXT.clear,
