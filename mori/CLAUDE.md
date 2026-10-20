@@ -179,7 +179,7 @@ mori/
   legacy/index.html        今の版（作り直し前）。参考用、切り替えまでは公開もこれ
   src/
     main.ts                Phaser の設定とシーン登録
-    scenes/                Boot, Title, Home(まもりびとの家), StageSelect, Battle, Result
+    scenes/                Boot, Menu（タイトル・まもりびとの家・ステージ選び。画面は ui/Menus の HTML）, Battle（結果の画面を含む）
     systems/               World, Combat, Waves, Build, Level, Upgrades, Save
     entities/              Player, Enemy, Tower, Wall, Tree, House
     views/                 各エンティティの描画と演出
@@ -187,7 +187,8 @@ mori/
     data/
       towers.json          とうの数値と分かれ道
       enemies.json         敵の数値と特徴
-      upgrades.json        戦闘中の強化と、ステージをまたいだ成長
+      upgrades.json        戦闘中の強化（レベルアップの3択）
+      home.json            まもりびとの家の強化・とうの解放・クリアのごほうび
       difficulty.json      難易度の倍率
       text.json            画面の文言
       stages/stage1.json … stage8.json, endless.json

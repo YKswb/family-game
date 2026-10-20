@@ -1,6 +1,7 @@
 import buildingsJson from './buildings.json';
 import difficultyJson from './difficulty.json';
 import enemiesJson from './enemies.json';
+import homeJson from './home.json';
 import playerJson from './player.json';
 import practiceJson from './stages/practice.json';
 import stage1Json from './stages/stage1.json';
@@ -246,6 +247,33 @@ export interface WeatherData {
   size: number;
 }
 
+/** まもりびとの家での強化の効き目 */
+export type HomeStat = 'speed' | 'attack' | 'capacity' | 'chop' | 'towerDamage' | 'buildCost' | 'houseHp' | 'wallHp' | 'startWood';
+
+export interface HomeUpgrade {
+  id: string;
+  /** keeper（あらた）、tower（とう）、house（おうち） */
+  group: string;
+  icon: string;
+  name: string;
+  desc: string;
+  /** レベルごとの値段（なつこの愛）。長さが最大レベル */
+  costs: number[];
+  stat: HomeStat;
+  /** 1レベルごとに足す量（mul ならレベルの数だけ掛ける） */
+  add?: number;
+  mul?: number;
+}
+
+export interface HomeData {
+  /** クリアでもらえるなつこの愛 */
+  rewards: { firstClear: number; firstClearPerStar: number; replay: number; replayPerStar: number; crown: number };
+  groups: { id: string; icon: string; name: string }[];
+  upgrades: HomeUpgrade[];
+  /** ステージで見たとうを、ここで解放するとどのステージでも使える */
+  unlocks: { tower: TowerKind; cost: number }[];
+}
+
 export interface StageTheme {
   background: string;
   ground: string;
@@ -292,6 +320,8 @@ export interface WaveData {
 }
 
 export interface StageData {
+  /** セーブで使う名前（変えるとクリアの記録が消えるので変えない） */
+  id: string;
   name: string;
   /** 最初の準備時間に出すヒント */
   tip: string;
@@ -326,6 +356,7 @@ export interface GameData {
   towers: TowerData;
   difficulty: Difficulty[];
   upgrades: UpgradeData;
+  home: HomeData;
 }
 
 export const GAME_DATA: GameData = {
@@ -336,10 +367,18 @@ export const GAME_DATA: GameData = {
   towers: towersJson as TowerData,
   difficulty: difficultyJson,
   upgrades: upgradesJson as UpgradeData,
+  home: homeJson as HomeData,
 };
 
 // JSON の配列は TypeScript では組（[number, number]）と見なされないので、unknown を経由する
 export const STAGES: StageData[] = [stage1Json as unknown as StageData];
 
-/** 新しいとうと敵を試すための練習の森（URL の ?stage=practice で遊べる） */
+/** 新しいとうと敵を試すための練習の森（ステージ選びの最後に出す） */
 export const PRACTICE_STAGE = practiceJson as unknown as StageData;
+
+/** ステージ選びに並べる順 */
+export const SELECTABLE_STAGES: StageData[] = [...STAGES, PRACTICE_STAGE];
+
+export function stageById(id: string): StageData | undefined {
+  return SELECTABLE_STAGES.find((s) => s.id === id);
+}

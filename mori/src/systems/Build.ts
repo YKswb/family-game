@@ -22,6 +22,8 @@ export class Spot {
   pop = 0;
   /** まだ現れていない（領地を広げると現れる）、または役目を終えた */
   hidden = false;
+  /** 値段に掛ける倍率（まもりびとの家の「けんちく 名人」） */
+  costMul = 1;
 
   // ---- とう ----
   /** 建てたときに選んだ種類（選ぶまでは null で、それまで次のレベルへは払えない） */
@@ -60,7 +62,9 @@ export class Spot {
 
   /** 次のレベルに必要な木材の合計（最大レベルなら0） */
   get cost(): number {
-    return this.maxed ? 0 : this.data.kinds[this.type].costs[this.level];
+    if (this.maxed) return 0;
+    const base = this.data.kinds[this.type].costs[this.level];
+    return this.costMul === 1 ? base : Math.max(1, Math.round(base * this.costMul));
   }
 
   /** 次のレベルまでの残り */

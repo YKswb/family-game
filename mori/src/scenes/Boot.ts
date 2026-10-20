@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
 
-/** 起動直後のシーン。今は戦場へそのまま進む（タイトル画面はあとのマイルストーンで足す） */
+/** 起動直後のシーン。タイトル画面へ進む */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
   }
 
   create(): void {
-    this.scene.start('Battle');
+    this.scene.start('Menu', { screen: 'title' });
   }
 }

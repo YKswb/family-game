@@ -73,7 +73,7 @@ function answer(w: World, towers: { n: number }): void {
   if (!c) return;
   if (c.type === 'tower') {
     // このステージで建てられる種類だけを、決まった順に
-    const order = TOWER_ORDER.filter((k) => w.stage.towers.includes(k));
+    const order = TOWER_ORDER.filter((k) => w.towers.includes(k));
     w.chooseTower(order[towers.n++ % order.length]);
     return;
   }

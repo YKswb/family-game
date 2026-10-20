@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BattleScene } from './scenes/Battle';
 import { BootScene } from './scenes/Boot';
+import { MenuScene } from './scenes/Menu';
 import { DPR, screenSize } from './ui/Display';
 
 // 縦横どちらでも画面いっぱいに描く。Retina でぼやけないよう、内部の画素数は DPR 倍にして
@@ -17,7 +18,7 @@ const game = new Phaser.Game({
     zoom: 1 / DPR,
   },
   input: { activePointers: 3 },
-  scene: [BootScene, BattleScene],
+  scene: [BootScene, MenuScene, BattleScene],
 });
 
 function fit(): void {

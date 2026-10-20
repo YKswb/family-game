@@ -1,4 +1,5 @@
 {
+  "id": "practice",
   "name": "練習の森",
   "tip": "新しい とうと 敵を ためす 森だよ",
   "towers": ["arrow", "cannon", "ice", "lightning", "heal"],

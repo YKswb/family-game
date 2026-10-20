@@ -1,0 +1,108 @@
+import { TOWER_KINDS, type HomeData, type StageData, type TowerKind } from '../data/gameData';
+import type { SaveData } from './Save';
+
+/** まもりびとの家の強化を合わせた、ステージに持っていく力 */
+export interface HomeBonus {
+  /** 歩く速さに足す（1 が基準） */
+  speed: number;
+  attack: number;
+  capacity: number;
+  /** 木を切る間隔に掛ける */
+  chop: number;
+  /** とうの攻撃に足す（1 が基準） */
+  towerDamage: number;
+  /** とうとかべの値段に掛ける */
+  buildCost: number;
+  houseHp: number;
+  /** かべの HP に足す（1 が基準） */
+  wallHp: number;
+  startWood: number;
+}
+
+export function noBonus(): HomeBonus {
+  return { speed: 0, attack: 0, capacity: 0, chop: 1, towerDamage: 0, buildCost: 1, houseHp: 0, wallHp: 0, startWood: 0 };
+}
+
+/** セーブの強化レベルから、ステージに持っていく力を出す */
+export function homeBonus(s: SaveData, data: HomeData): HomeBonus {
+  const b = noBonus();
+  for (const u of data.upgrades) {
+    const lv = Math.min(s.levels[u.id] ?? 0, u.costs.length);
+    if (lv === 0) continue;
+    if (u.mul !== undefined) b[u.stat] *= Math.pow(u.mul, lv);
+    else b[u.stat] += (u.add ?? 0) * lv;
+  }
+  return b;
+}
+
+/** 次のレベルの値段（最大なら null） */
+export function nextCost(s: SaveData, data: HomeData, id: string): number | null {
+  const u = data.upgrades.find((x) => x.id === id);
+  if (!u) return null;
+  const lv = s.levels[id] ?? 0;
+  return lv < u.costs.length ? u.costs[lv] : null;
+}
+
+/** 強化を1レベル上げる。なつこの愛が足りない・最大なら何もしないで false */
+export function buyUpgrade(s: SaveData, data: HomeData, id: string): boolean {
+  const cost = nextCost(s, data, id);
+  if (cost === null || s.love < cost) return false;
+  s.love -= cost;
+  s.levels[id] = (s.levels[id] ?? 0) + 1;
+  return true;
+}
+
+/** 強化を全部やめて、使ったなつこの愛を全部戻す（解放したとうはそのまま） */
+export function refundAll(s: SaveData, data: HomeData): number {
+  let back = 0;
+  for (const u of data.upgrades) {
+    const lv = Math.min(s.levels[u.id] ?? 0, u.costs.length);
+    for (let i = 0; i < lv; i++) back += u.costs[i];
+  }
+  s.levels = {};
+  s.love += back;
+  return back;
+}
+
+/** 解放できるとう（ステージで見たことがあって、まだ解放していないもの） */
+export function unlockable(s: SaveData, data: HomeData): { tower: TowerKind; cost: number }[] {
+  return data.unlocks.filter((u) => s.seen.includes(u.tower) && !s.unlocked.includes(u.tower));
+}
+
+export function unlockTower(s: SaveData, data: HomeData, tower: TowerKind): boolean {
+  const u = unlockable(s, data).find((x) => x.tower === tower);
+  if (!u || s.love < u.cost) return false;
+  s.love -= u.cost;
+  s.unlocked.push(tower);
+  return true;
+}
+
+/** ステージで使えるとう：そのステージのとうと、解放したとう（いつもの順に並べる） */
+export function availableTowers(stage: StageData, s: SaveData): TowerKind[] {
+  return TOWER_KINDS.filter((k) => stage.towers.includes(k) || s.unlocked.includes(k));
+}
+
+/** ステージを始めたときに、そのステージのとうを「見た」ことにする */
+export function markSeen(s: SaveData, stage: StageData): void {
+  for (const k of stage.towers) if (!s.seen.includes(k)) s.seen.push(k);
+}
+
+export interface Reward {
+  love: number;
+  first: boolean;
+  /** 新しく王冠をとった */
+  crown: boolean;
+}
+
+/** クリアしたときにもらえるなつこの愛（はじめてのクリアは多め）。記録も書き換える */
+export function clearStage(s: SaveData, data: HomeData, stageId: string, stars: number, difficulty: number): Reward {
+  const r = data.rewards;
+  const rec = s.stages[stageId] ?? { stars: 0, crown: false, clears: 0 };
+  const first = rec.clears === 0;
+  const crown = difficulty === 2 && !rec.crown;
+  let love = first ? r.firstClear + r.firstClearPerStar * stars : r.replay + r.replayPerStar * stars;
+  if (crown) love += r.crown;
+  s.stages[stageId] = { stars: Math.max(rec.stars, stars), crown: rec.crown || difficulty === 2, clears: rec.clears + 1 };
+  s.love += love;
+  return { love, first, crown };
+}

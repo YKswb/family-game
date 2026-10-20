@@ -1,4 +1,5 @@
 {
+  "id": "stage1",
   "name": "はじまりの森",
   "tip": "",
   "towers": ["arrow", "cannon", "ice"],

@@ -1,0 +1,29 @@
+{
+  "rewards": {
+    "firstClear": 30,
+    "firstClearPerStar": 10,
+    "replay": 8,
+    "replayPerStar": 3,
+    "crown": 20
+  },
+  "groups": [
+    { "id": "keeper", "icon": "🧒", "name": "あらた" },
+    { "id": "tower", "icon": "🏰", "name": "とう" },
+    { "id": "house", "icon": "🏠", "name": "おうち" }
+  ],
+  "upgrades": [
+    { "id": "speed", "group": "keeper", "icon": "👟", "name": "はやあし", "desc": "歩く はやさ +6%", "costs": [10, 20, 35], "stat": "speed", "add": 0.06 },
+    { "id": "attack", "group": "keeper", "icon": "⚔️", "name": "つよい おの", "desc": "斧の こうげき +0.5", "costs": [15, 30, 50], "stat": "attack", "add": 0.5 },
+    { "id": "carry", "group": "keeper", "icon": "🎒", "name": "大きな せおいかご", "desc": "持てる 木材 +5", "costs": [10, 20, 35], "stat": "capacity", "add": 5 },
+    { "id": "chop", "group": "keeper", "icon": "🪓", "name": "木こりの わざ", "desc": "木を切る はやさ +10%", "costs": [10, 20, 35], "stat": "chop", "mul": 0.9 },
+    { "id": "towerPower", "group": "tower", "icon": "🏹", "name": "とうの 力", "desc": "とうの こうげき +10%", "costs": [15, 30, 50], "stat": "towerDamage", "add": 0.1 },
+    { "id": "builder", "group": "tower", "icon": "🔨", "name": "けんちく 名人", "desc": "とうと かべが 木材 8% 安くなる", "costs": [15, 30, 50], "stat": "buildCost", "mul": 0.92 },
+    { "id": "house", "group": "house", "icon": "🏠", "name": "じょうぶな おうち", "desc": "おうちの HP +4", "costs": [10, 20, 35], "stat": "houseHp", "add": 4 },
+    { "id": "wall", "group": "house", "icon": "🧱", "name": "かたい かべ", "desc": "かべの HP +15%", "costs": [10, 20, 35], "stat": "wallHp", "add": 0.15 },
+    { "id": "stock", "group": "house", "icon": "🪵", "name": "たくわえ", "desc": "さいしょから 木材を 5 持っている", "costs": [8, 16, 28], "stat": "startWood", "add": 5 }
+  ],
+  "unlocks": [
+    { "tower": "lightning", "cost": 40 },
+    { "tower": "heal", "cost": 40 }
+  ]
+}

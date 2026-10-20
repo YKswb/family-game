@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
-import { PRACTICE_STAGE, STAGES, type StageData } from '../data/gameData';
+import { GAME_DATA, PRACTICE_STAGE, STAGES, stageById, type StageData } from '../data/gameData';
 import type { Spot } from '../systems/Build';
+import { availableTowers, clearStage, homeBonus, markSeen } from '../systems/Home';
 import { Random } from '../systems/Random';
+import { SaveStore, type SaveData } from '../systems/Save';
 import { World, type WorldEvent } from '../systems/World';
 import { DPR, TEXT, fmt, hex, screenSize, textStyle, worldZoom } from '../ui/Display';
 import { Hud } from '../ui/Hud';
@@ -49,21 +51,19 @@ const POPUP_LIFE = 1.1;
 /** えんとつの煙を出す間隔（秒） */
 const CHIMNEY_INTERVAL = 0.7;
 
-/** 難易度は、ステージ選びができるまでは URL の ?diff=0〜2 で選ぶ（既定はふつう） */
-function difficultyFromUrl(): number {
-  const v = new URLSearchParams(window.location.search).get('diff');
-  return v === '0' ? 0 : v === '2' ? 2 : 1;
-}
-
-/** ステージも、ステージ選びができるまでは URL の ?stage=practice で練習の森を選べる */
-function stageFromUrl(): { stage: StageData; practice: boolean } {
-  const practice = new URLSearchParams(window.location.search).get('stage') === 'practice';
-  return { stage: practice ? PRACTICE_STAGE : STAGES[0], practice };
+/** ステージ選びから渡されるもの */
+export interface BattleData {
+  stageId?: string;
+  difficulty?: number;
 }
 
 /** 戦場：木を集めて建て、敵のウェーブからおうちを守る */
 export class BattleScene extends Phaser.Scene {
   private world!: World;
+  private startData: BattleData = {};
+  private stage!: StageData;
+  private store!: SaveStore;
+  private save!: SaveData;
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private spotGfx!: Phaser.GameObjects.Graphics;
   /** 地面の上（敵より下）に描くもの：大ほうの火 */
@@ -104,7 +104,8 @@ export class BattleScene extends Phaser.Scene {
     super('Battle');
   }
 
-  init(): void {
+  init(data: BattleData): void {
+    this.startData = data ?? {};
     this.spotLabels = new Map();
     this.flyers = [];
     this.popups = [];
@@ -115,10 +116,21 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { stage, practice } = stageFromUrl();
-    this.practice = practice;
+    const stage = (this.stage = stageById(this.startData.stageId ?? '') ?? STAGES[0]);
+    this.practice = stage.id === PRACTICE_STAGE.id;
     const th = stage.theme;
-    this.world = new World(stage, { seed: Date.now() % 100000, difficulty: difficultyFromUrl() });
+    // セーブから家の強化と解放したとうを持ってくる。このステージのとうは「見た」ことにする
+    this.store = new SaveStore();
+    this.save = this.store.load();
+    markSeen(this.save, stage);
+    this.store.save(this.save);
+    const difficulty = this.startData.difficulty ?? this.save.difficulty;
+    this.world = new World(stage, {
+      seed: Date.now() % 100000,
+      difficulty,
+      home: homeBonus(this.save, GAME_DATA.home),
+      towers: availableTowers(stage, this.save),
+    });
     this.leaf = [hex(th.leaf[0]), hex(th.leaf[1])];
     this.terrShown = this.world.territory;
     this.fx = new Effects();
@@ -257,8 +269,15 @@ export class BattleScene extends Phaser.Scene {
       title: TEXT.pause,
       stars: 0,
       lines: [w.stage.name, `${fmt(TEXT.level, { lv: w.level })}・${w.diff.name}`],
-      buttons: [{ label: TEXT.resume, onTap: () => (this.paused = false) }],
+      buttons: [
+        { label: TEXT.resume, onTap: () => (this.paused = false) },
+        { label: TEXT.quit, secondary: true, onTap: () => this.goHome() },
+      ],
     });
+  }
+
+  private goHome(): void {
+    this.scene.start('Menu', { screen: 'home' });
   }
 
   /** とうの種類、とうの分かれ道、レベルアップの強化を選ぶ画面を出す */
@@ -269,8 +288,8 @@ export class BattleScene extends Phaser.Scene {
     this.joystick.release();
     const kinds = w.data.towers.kinds;
     if (c.type === 'tower') {
-      // このステージで建てられる種類だけを出す
-      const list = w.stage.towers;
+      // このステージで建てられる種類（ステージのとうと、家で解放したとう）だけを出す
+      const list = w.towers;
       this.overlay.showChoice(
         TEXT.chooseTower,
         '',
@@ -311,16 +330,29 @@ export class BattleScene extends Phaser.Scene {
 
   private showResult(): void {
     const w = this.world;
-    const retry = { label: TEXT.retry, onTap: () => this.scene.restart() };
+    const retry = { label: TEXT.retry, onTap: () => this.scene.restart(this.startData) };
+    const home = { label: TEXT.goHome, onTap: () => this.goHome() };
     if (w.outcome === 'won') {
+      // なつこの愛をもらい、記録と一緒にすぐ保存する
+      const r = clearStage(this.save, GAME_DATA.home, this.stage.id, w.stars, w.difficulty);
+      this.store.save(this.save);
       this.overlay.showResult({
         title: TEXT.clear,
         stars: w.stars,
-        lines: [TEXT.clearLead, `${fmt(TEXT.houseHp, { hp: w.house.hp, max: w.house.maxHp })}　${fmt(TEXT.level, { lv: w.level })}`],
-        buttons: [retry],
+        lines: [
+          TEXT.clearLead,
+          `${fmt(TEXT.houseHp, { hp: w.house.hp, max: w.house.maxHp })}　${fmt(TEXT.level, { lv: w.level })}`,
+          `💗 ${fmt(r.first ? TEXT.rewardFirst : TEXT.reward, { n: r.love })}`,
+        ],
+        buttons: [home, { ...retry, secondary: true }],
       });
     } else {
-      this.overlay.showResult({ title: TEXT.lose, stars: 0, lines: [fmt(TEXT.loseLead, { n: w.wave }), TEXT.loseTip], buttons: [retry] });
+      this.overlay.showResult({
+        title: TEXT.lose,
+        stars: 0,
+        lines: [fmt(TEXT.loseLead, { n: w.wave }), TEXT.loseTip],
+        buttons: [retry, { ...home, secondary: true }],
+      });
     }
   }
 

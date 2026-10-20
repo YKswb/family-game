@@ -15,6 +15,7 @@ import { Tree } from '../entities/Tree';
 import { Spot, paySpot } from './Build';
 import { damageTo, fromFront, knockbackOf, shieldable, type DamageSource } from './Combat';
 import { updateEnemies } from './Enemies';
+import { noBonus, type HomeBonus } from './Home';
 import { Random } from './Random';
 import { placeTrees } from './Stage';
 import { updateShots, updateTowers, wallGuardAt, type Shot } from './Towers';
@@ -111,6 +112,10 @@ export interface WorldOptions {
   /** 0: かんたん、1: ふつう、2: むずかしい */
   difficulty?: number;
   data?: GameData;
+  /** まもりびとの家の強化（省略時は強化なし） */
+  home?: HomeBonus;
+  /** 建てられるとうの種類（省略時はステージのとう。解放したとうを足して渡す） */
+  towers?: TowerKind[];
 }
 
 /** 1ステージ分の状態と時間の進め方。描画とは切り離してあり、ヘッドレスでも動く */
@@ -118,6 +123,9 @@ export class World {
   readonly data: GameData;
   readonly stage: StageData;
   readonly difficulty: number;
+  /** 建てたときに選べるとうの種類 */
+  readonly towers: TowerKind[];
+  readonly home: HomeBonus;
   readonly diff: Difficulty;
   readonly width: number;
   readonly height: number;
@@ -179,12 +187,23 @@ export class World {
     this.width = stage.width;
     this.height = stage.height;
     this.rng = new Random(opts.seed ?? 1);
-    this.house = new House(stage.house.x, stage.house.y, stage.house.r, this.diff.houseHp, this.diff.houseHp);
+    this.towers = opts.towers ?? stage.towers;
+    const home = (this.home = opts.home ?? noBonus());
+    // 家の強化は、戦闘中の強化の出発点として入れておく
+    this.mods.speed += home.speed;
+    this.mods.attack += home.attack;
+    this.mods.capacity += home.capacity;
+    this.mods.chop *= home.chop;
+    this.mods.towerDamage += home.towerDamage;
+    this.mods.wallHp += home.wallHp;
+    const houseHp = this.diff.houseHp + home.houseHp;
+    this.house = new House(stage.house.x, stage.house.y, stage.house.r, houseHp, houseHp);
     this.player = new Player(stage.player.x, stage.player.y, this.data.player.radius);
     const td = this.data.trees;
     this.trees = placeTrees(stage, this.rng).map((t, i) => new Tree(i, t.x, t.y, t.size, td.hp, td.hp));
     this.timer = this.diff.firstPrep;
     this.createSpots();
+    this.player.wood = Math.min(this.capacity, home.startWood);
   }
 
   private createSpots(): void {
@@ -193,6 +212,7 @@ export class World {
     for (const s of this.stage.spots) {
       const spot = new Spot(this.spots.length, s.type, h.x + s.dx, h.y + s.dy, bd);
       spot.hidden = (s.territory ?? 0) > 0;
+      if (s.type === 'tower') spot.costMul = this.home.buildCost;
       if (s.moves) this.landMoves.set(spot, s.moves);
       this.spots.push(spot);
     }
@@ -202,6 +222,7 @@ export class World {
       const a = ((i + 0.5) * tau) / sectors;
       const spot = new Spot(this.spots.length, 'wall', h.x + Math.cos(a) * radius, h.y + Math.sin(a) * radius, bd);
       spot.angle = a;
+      spot.costMul = this.home.buildCost;
       for (let j = 0; j < postsPerSector; j++) {
         const b = (i * tau) / sectors + ((j + 0.5) * tau) / (sectors * postsPerSector);
         spot.posts.push({ x: h.x + Math.cos(b) * radius, y: h.y + Math.sin(b) * radius });
@@ -274,7 +295,7 @@ export class World {
   /** とうの種類を決める */
   chooseTower(kind: TowerKind): void {
     const c = this.choice;
-    if (!c || c.type !== 'tower') return;
+    if (!c || c.type !== 'tower' || !this.towers.includes(kind)) return;
     c.spot.kind = kind;
     c.spot.cd = this.data.towers.firstShotDelay;
     this.choices.shift();

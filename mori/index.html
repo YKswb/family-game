@@ -54,6 +54,47 @@
   .opt .name { font-size: 19px; display: block; }
   .opt .desc { font-size: 14px; color: var(--sub); display: block; margin-top: 2px; line-height: 1.5; font-weight: 700; }
   .hudbtn:focus-visible, .btn:focus-visible, .opt:focus-visible, #callnow:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .btn2 { font: inherit; font-size: 18px; color: var(--ink); background: transparent; border: 3px solid var(--sub); border-radius: 18px;
+    padding: 10px 24px; cursor: pointer; }
+  .btn:disabled, .btn2:disabled, .mini:disabled { opacity: .4; cursor: default; transform: none; }
+
+  /* タイトル・まもりびとの家・ステージ選び */
+  #menu { position: fixed; inset: 0; overflow: auto; touch-action: pan-y; box-sizing: border-box;
+    padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+    display: flex; flex-direction: column; align-items: center; }
+  #menu .panel { width: 100%; max-width: 760px; margin: auto 0; background: var(--panel); border-radius: 30px; padding: 22px 20px 24px;
+    box-shadow: 0 10px 0 rgba(0, 0, 0, .22); box-sizing: border-box; }
+  #menu .logo { text-align: center; margin: auto 0; }
+  #menu .logo h1 { font-size: clamp(40px, 9vw, 76px); margin: 0 0 4px; color: #fff; letter-spacing: .06em;
+    text-shadow: 0 4px 0 #2b2116, 0 0 2px #2b2116, 3px 3px 0 #2b2116, -3px 3px 0 #2b2116, 3px -1px 0 #2b2116, -3px -1px 0 #2b2116; }
+  #menu .logo p { font-size: 20px; color: #fff; margin: 0 0 26px; text-shadow: 0 2px 0 #2b2116, 2px 0 0 #2b2116, -2px 0 0 #2b2116, 0 -2px 0 #2b2116; }
+  #menu .logo .btns { gap: 14px; }
+  #menu .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  #menu .head h2 { margin: 0; font-size: clamp(24px, 5vw, 32px); }
+  #menu .love { font-size: 22px; background: #ffe3ec; color: #b8325a; border-radius: 16px; padding: 6px 14px; white-space: nowrap; }
+  #menu .group { margin: 14px 0 6px; font-size: 19px; display: flex; align-items: center; gap: 8px; }
+  #menu .rows { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  #menu .row { display: flex; align-items: center; gap: 10px; background: var(--chip); border-radius: 16px; padding: 10px 12px; }
+  #menu .row b { font-size: 28px; flex: none; width: 36px; text-align: center; }
+  #menu .row .txt { flex: 1; min-width: 0; }
+  #menu .row .name { font-size: 17px; display: block; }
+  #menu .row .desc { font-size: 14px; color: var(--sub); display: block; font-weight: 700; line-height: 1.4; }
+  #menu .row .lv { font-size: 13px; color: #e0a000; letter-spacing: 2px; display: block; }
+  .mini { font: inherit; font-size: 15px; flex: none; border: none; border-radius: 14px; padding: 8px 10px; min-width: 74px;
+    background: var(--btn); color: var(--btn-ink); box-shadow: 0 4px 0 var(--btn-d); cursor: pointer; }
+  .mini:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--btn-d); }
+  #menu .note { font-size: 14px; color: var(--sub); margin: 6px 2px; font-weight: 700; }
+  #menu .foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  #menu .diff { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 4px 0 12px; }
+  #menu .dbtn { font: inherit; font-size: 17px; padding: 8px 16px; border-radius: 14px; border: 3px solid var(--sub); background: transparent; color: var(--ink); cursor: pointer; }
+  #menu .dbtn.on { background: var(--btn); border-color: var(--btn-d); color: var(--btn-ink); }
+  #menu .stages { display: grid; gap: 10px; }
+  #menu .sbtn { font: inherit; display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: none; border-radius: 18px;
+    background: var(--chip); color: var(--ink); font-size: 19px; text-align: left; cursor: pointer; }
+  #menu .sbtn .sw { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: #fff; font-size: 22px; flex: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
+  #menu .sbtn .nm { flex: 1; }
+  #menu .sbtn .st { color: #ffb400; font-size: 17px; letter-spacing: 1px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -61,6 +102,7 @@
   <div id="game"></div>
   <button id="pause" class="hudbtn hide" aria-label="ひとやすみ">⏸</button>
   <button id="callnow" class="hide"></button>
+  <div id="menu" class="hide"></div>
   <div id="ov" class="hide"><div class="card" id="card"></div></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

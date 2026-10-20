@@ -10,7 +10,8 @@ export interface ResultInfo {
   /** ★の数（0なら出さない） */
   stars: number;
   lines: string[];
-  buttons: { label: string; onTap: () => void }[];
+  /** secondary はふち取りだけの目立たないボタン（やめる、家に もどる など） */
+  buttons: { label: string; onTap: () => void; secondary?: boolean }[];
 }
 
 function el(id: string): HTMLElement {
@@ -19,7 +20,8 @@ function el(id: string): HTMLElement {
   return e;
 }
 
-function escape(s: string): string {
+/** HTML に入れる文字を安全にする */
+export function escape(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 }
 
@@ -62,9 +64,9 @@ export class Overlay {
   showResult(info: ResultInfo): void {
     const stars = info.stars > 0 ? `<div class="stars">${'★'.repeat(info.stars)}${'☆'.repeat(3 - info.stars)}</div>` : '';
     const lines = info.lines.map((l) => `<p class="lead">${escape(l)}</p>`).join('');
-    const btns = info.buttons.map((b, i) => `<button class="btn" data-i="${i}">${escape(b.label)}</button>`).join('');
+    const btns = info.buttons.map((b, i) => `<button class="${b.secondary ? 'btn2' : 'btn'}" data-i="${i}">${escape(b.label)}</button>`).join('');
     this.open(`<div class="title">${escape(info.title)}</div>${stars}${lines}<div class="btns">${btns}</div>`);
-    this.card.querySelectorAll<HTMLButtonElement>('.btn').forEach((b) => {
+    this.card.querySelectorAll<HTMLButtonElement>('button[data-i]').forEach((b) => {
       b.onclick = () => {
         this.hide();
         info.buttons[Number(b.dataset.i)].onTap();
