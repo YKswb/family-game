@@ -88,9 +88,8 @@ describe('ステージ1の仕組み', () => {
     for (const sq of w.squads) expect(w.isGuardSquad(sq)).toBe(guards.includes(sq.name));
     const g1 = w.squadById(guards[0])!;
     for (const u of g1.units.slice(1)) u.dead = true;
-    w.strike(w.hero, g1.alive[0]);
-    w.strike(w.hero, g1.alive[0]);
-    expect(g1.aliveCount).toBe(0);
+    // ジャンヌのそばでは攻撃が上がるので、1回で倒れることもある
+    while (g1.aliveCount > 0) w.strike(w.hero, g1.alive[0]);
     expect(w.events).toContainEqual({ type: 'squadWiped', squad: g1 });
     expect(w.guardsLeft()).toBe(guards.length - 1);
   });

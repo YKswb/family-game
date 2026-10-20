@@ -37,7 +37,7 @@
   },
   "start": {
     "hero": { "x": 440, "y": 1960, "dir": [1, 0] },
-    "jeanne": null
+    "jeanne": { "x": 400, "y": 1960 }
   },
   "squads": [
     { "id": "militiaSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 720, "y": 1640 },

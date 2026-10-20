@@ -9,6 +9,7 @@ export function stageConfig(stage: StageData, seed = 1): WorldConfig {
     height: stage.height,
     hero: { x: stage.start.hero.x, y: stage.start.hero.y },
     heroDir: stage.start.hero.dir,
+    jeanne: stage.start.jeanne ?? null,
     seed,
     obstacles: t.forests,
     blockers: [...t.rivers, ...t.walls],

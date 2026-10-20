@@ -13,6 +13,11 @@ const COLOR = {
   /** 待機して休んでいる仲間（戦わず、狙われない） */
   resting: 0x9fc3ff,
   hero: 0xffd04a,
+  /** ジャンヌの白いよろい・髪・旗 */
+  jeanne: 0xf2f4f8,
+  hair: 0x9a6a3a,
+  banner: 0xfffdf5,
+  hpJeanne: 0xff9ec4,
   /** 敵の大将 */
   general: 0x2a2a33,
   gold: 0xffcc1f,
@@ -38,10 +43,11 @@ const COLOR = {
 export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = false, guardRing = false): void {
   const isHero = u.kind === 'hero';
   const isGen = u.kind === 'general';
+  const isJeanne = u.kind === 'jeanne';
   const flash = u.hitFlash > 0;
   const team =
     u.squad?.mode === 'neutral' ? COLOR.neutral : u.squad?.waiting ? COLOR.resting : u.side === 'ally' ? COLOR.ally : COLOR.enemy;
-  const body = flash ? COLOR.flash : isHero ? COLOR.hero : isGen ? COLOR.general : team;
+  const body = flash ? COLOR.flash : isHero ? COLOR.hero : isGen ? COLOR.general : isJeanne ? COLOR.jeanne : team;
   const bob = u.moving ? Math.abs(Math.sin(u.bob)) * 2 : 0;
   const r = u.radius;
 
@@ -68,12 +74,22 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
     g.lineStyle(2, COLOR.steel, 1);
     g.lineBetween(6, -22 - bob, 18, -34 - bob - u.swing * 6);
   } else {
-    const hh = isGen ? 1.5 : isHero ? 1.25 : 1;
+    const hh = isGen ? 1.5 : isHero ? 1.25 : isJeanne ? 1.15 : 1;
     const top = -9 * hh - r * 1.5 - bob;
     const headY = top - 7;
     g.fillStyle(COLOR.legs, 1);
     g.fillRect(-5, -9 * hh - bob, 4, 9 * hh);
     g.fillRect(1, -9 * hh - bob, 4, 9 * hh);
+    if (isJeanne) {
+      // 背中の白い旗（ゆれる）
+      const wave = Math.sin(u.bob * 0.6) * 2;
+      g.lineStyle(2.5, COLOR.wood, 1);
+      g.lineBetween(-7, -4 - bob, -7, top - 30);
+      g.fillStyle(COLOR.banner, 1);
+      g.fillTriangle(-7, top - 30, -31, top - 23 + wave, -7, top - 14);
+      g.fillStyle(COLOR.gold, 1);
+      g.fillCircle(-14, top - 22 + wave / 2, 2.5);
+    }
     if (isHero) {
       g.fillStyle(COLOR.cape, 1);
       g.fillTriangle(-9, top + 2, -17, -6 - bob, -4, -10 - bob);
@@ -88,6 +104,16 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
       g.fillRoundedRect(-9, headY - 10, 18, 8, 3);
       g.fillStyle(0xd9342b, 1);
       g.fillEllipse(0, headY - 14, 6, 14);
+    }
+    if (isJeanne) {
+      // 肩までの髪と、胸の金の印
+      g.fillStyle(COLOR.hair, 1);
+      g.beginPath();
+      g.arc(0, headY - 1, 6.8, Math.PI, 0);
+      g.fillPath();
+      g.fillRect(-7, headY - 1, 3, 8);
+      g.fillStyle(COLOR.gold, 1);
+      g.fillCircle(0, top + r * 0.6, 2.2);
     }
     if (isHero) {
       g.fillStyle(COLOR.helmet, 1);
@@ -114,7 +140,7 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
       g.save();
       g.translateCanvas(r * 0.8, -14 - bob);
       g.rotateCanvas(u.swing > 0 ? -1.6 + (1 - u.swing) * 2.4 : -0.4);
-      g.lineStyle(isGen || isHero ? 3 : 2, isGen ? COLOR.gold : COLOR.steel, 1);
+      g.lineStyle(isGen || isHero || isJeanne ? 3 : 2, isGen ? COLOR.gold : COLOR.steel, 1);
       g.lineBetween(0, 0, 0, -16 * hh);
       g.restore();
     }
@@ -128,12 +154,13 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
     g.fillCircle(u.x, u.y - 22, 34);
   }
 
-  if ((isHero || isGen) && u.hp < u.maxHp) {
+  if ((isHero || isGen || isJeanne) && u.hp < u.maxHp) {
     const w = isGen ? 60 : 44;
-    const y = u.y - (isGen ? 78 : 62);
+    const y = u.y - (isGen ? 78 : isJeanne ? 66 : 62);
+    const low = u.hp / u.maxHp <= 0.3;
     g.fillStyle(COLOR.hpBack, 0.45);
     g.fillRoundedRect(u.x - w / 2, y, w, 6, 3);
-    g.fillStyle(isGen ? COLOR.hpLow : u.hp / u.maxHp > 0.3 ? COLOR.hpHero : COLOR.hpLow, 1);
+    g.fillStyle(isGen || low ? COLOR.hpLow : isJeanne ? COLOR.hpJeanne : COLOR.hpHero, 1);
     g.fillRoundedRect(u.x - w / 2, y, Math.max(3, (w * u.hp) / u.maxHp), 6, 3);
   }
 }

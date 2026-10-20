@@ -40,7 +40,7 @@ export class Minimap {
     for (const o of world.obstacles) g.fillCircle(px(o.x), py(o.y), Math.max(2, o.r * sx));
 
     for (const u of world.units) {
-      if (u.dead || u === world.hero) continue;
+      if (u.dead || u === world.hero || u === world.jeanne) continue;
       const sq = u.squad;
       let color = sq && world.isGuardSquad(sq) ? 0xffcc1f : 0xff5a4f;
       if (u.side === 'ally') color = sq?.mode === 'neutral' ? 0xe8e8e8 : sq?.waiting ? 0x9fc3ff : 0x4f8dff;
@@ -66,6 +66,14 @@ export class Minimap {
       g.lineStyle(2, 0x1a140c, 1);
       g.fillCircle(px(gen.x), py(gen.y), 5.5);
       g.strokeCircle(px(gen.x), py(gen.y), 5.5);
+    }
+    // ジャンヌは桃色の印（ジャンの印の下に描く）
+    const j = world.jeanne;
+    if (j && !j.dead) {
+      g.fillStyle(0xff9ec4, 1);
+      g.lineStyle(2, 0x1a140c, 1);
+      g.fillCircle(px(j.x), py(j.y), 4);
+      g.strokeCircle(px(j.x), py(j.y), 4);
     }
     const h = world.hero;
     g.fillStyle(0xffd04a, 1);

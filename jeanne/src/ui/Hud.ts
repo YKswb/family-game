@@ -13,26 +13,35 @@ export function compositionText(sq: Squad, sep = ' '): string {
     .join(sep);
 }
 
-/** 画面左上：ジャンのHP、いまの命令、率いている部隊の一覧、敵の残りと経過時間 */
+/** ジャンヌの行の高さ（ジャンヌがいるステージでは、その分下の行をずらす） */
+const JEANNE_ROW = 36;
+
+/** 画面左上：ジャンのHP、ジャンヌのHP、いまの命令、率いている部隊の一覧、敵の残りと経過時間 */
 export class Hud {
   private readonly gfx: Phaser.GameObjects.Graphics;
   private readonly name: Phaser.GameObjects.Text;
+  private readonly jeanne: Phaser.GameObjects.Text;
   private readonly order: Phaser.GameObjects.Text;
   private readonly squads: Phaser.GameObjects.Text;
   private readonly counts: Phaser.GameObjects.Text;
   private readonly guards: Phaser.GameObjects.Text;
 
-  constructor(scene: Phaser.Scene) {
+  /** ジャンヌの行のぶん、下の行をずらす量 */
+  private readonly dy: number;
+
+  constructor(scene: Phaser.Scene, withJeanne: boolean) {
+    const dy = (this.dy = withJeanne ? JEANNE_ROW : 0);
     this.gfx = scene.add.graphics().setDepth(800);
     this.name = scene.add.text(30, 36, TEXT.heroName, textStyle(26, '#ffd04a')).setOrigin(0, 0.5).setDepth(801);
-    this.order = scene.add.text(30, 78, '', textStyle(24)).setOrigin(0, 0.5).setDepth(801);
-    this.squads = scene.add.text(30, 116, '', textStyle(22)).setOrigin(0, 0.5).setDepth(801);
-    this.counts = scene.add.text(30, 154, '', textStyle(20, '#e8e0cc')).setOrigin(0, 0.5).setDepth(801);
-    this.guards = scene.add.text(30, 190, '', textStyle(22, '#ffd84d')).setOrigin(0, 0.5).setDepth(801);
+    this.jeanne = scene.add.text(30, 74, TEXT.jeanneName, textStyle(22, '#ffe9f2')).setOrigin(0, 0.5).setDepth(801).setVisible(withJeanne);
+    this.order = scene.add.text(30, 78 + dy, '', textStyle(24)).setOrigin(0, 0.5).setDepth(801);
+    this.squads = scene.add.text(30, 116 + dy, '', textStyle(22)).setOrigin(0, 0.5).setDepth(801);
+    this.counts = scene.add.text(30, 154 + dy, '', textStyle(20, '#e8e0cc')).setOrigin(0, 0.5).setDepth(801);
+    this.guards = scene.add.text(30, 190 + dy, '', textStyle(22, '#ffd84d')).setOrigin(0, 0.5).setDepth(801);
   }
 
   get objects(): Phaser.GameObjects.GameObject[] {
-    return [this.gfx, this.name, this.order, this.squads, this.counts, this.guards];
+    return [this.gfx, this.name, this.jeanne, this.order, this.squads, this.counts, this.guards];
   }
 
   update(w: World): void {
@@ -42,7 +51,7 @@ export class Hud {
     g.fillStyle(0x000000, 0.38);
     // 大将がいるステージでは、残りの護衛の数を1行足す
     const hasGeneral = !!w.general;
-    g.fillRoundedRect(14, 12, 360, hasGeneral ? 200 : 166, 18);
+    g.fillRoundedRect(14, 12, 360, (hasGeneral ? 200 : 166) + this.dy, 18);
     // HPバー
     const bx = 150;
     const bw = 204;
@@ -57,11 +66,22 @@ export class Hud {
     g.fillRoundedRect(bx, 50, bw, 6, 3);
     g.fillStyle(0xffe066, 1);
     if (xr > 0) g.fillRoundedRect(bx, 50, Math.max(4, bw * xr), 6, 3);
+    // ジャンヌのHPバー（少ないときは赤）
+    const j = w.jeanne;
+    if (j) {
+      g.fillStyle(0xffffff, 0.25);
+      g.fillRoundedRect(bx, 66, bw, 16, 8);
+      const jr = Math.max(0, j.hp / j.maxHp);
+      g.fillStyle(jr >= w.data.ai.jeanne.lowHpRatio ? 0xff9ec4 : 0xff5a4f, 1);
+      if (jr > 0) g.fillRoundedRect(bx, 66, Math.max(8, bw * jr), 16, 8);
+    }
     this.name.setText(`${TEXT.heroName} ${fmt(TEXT.levelShort, { n: w.level })}`);
 
     const charge = w.order === 'charge';
     this.order.setText(fmt(TEXT.orderLabel, { order: charge ? TEXT.orderCharge : TEXT.orderGather }));
-    this.order.setColor(charge ? '#ffb0a8' : '#bcd6ff');
+    // 色の設定は文字の描き直しになるので、変わったときだけ
+    const color = charge ? '#ffb0a8' : '#bcd6ff';
+    if (this.order.style.color !== color) this.order.setColor(color);
 
     const following = w.followingSquads();
     const list = following.map((sq) => compositionText(sq, '')).join(' ');

@@ -2,7 +2,9 @@ import { UNIT_DATA, type SoldierKind, type UnitData, type UnitKind } from '../da
 import { updateHoldSquad } from '../ai/EnemyAI';
 import { layoutSquad } from '../ai/Formation';
 import { updateFollowSquads, updateSoldier } from '../ai/SquadAI';
+import { updateJeanne } from '../ai/JeanneAI';
 import { Hero } from '../entities/Hero';
+import { Jeanne } from '../entities/Jeanne';
 import { Squad, type SquadMode } from '../entities/Squad';
 import { Unit, type Side } from '../entities/Unit';
 import { computeDamage } from './Combat';
@@ -42,6 +44,8 @@ export interface WorldConfig {
   hero: { x: number; y: number };
   /** ジャンの最初の向き。省略時は上向き */
   heroDir?: [number, number];
+  /** ジャンヌの最初の位置。省略時・null ならジャンヌは出ない（練習場など） */
+  jeanne?: { x: number; y: number } | null;
   squads: SquadSpec[];
   /** 通れない円（森など） */
   obstacles?: { x: number; y: number; r: number }[];
@@ -65,6 +69,8 @@ export interface WorldConfig {
 /** gather: しゅうごう（隊列を守る）、charge: とつげき */
 export type Order = 'gather' | 'charge';
 export type Outcome = 'playing' | 'won' | 'lost';
+/** 負けた理由：ジャンが倒れた／ジャンヌが倒れた */
+export type LostBy = 'hero' | 'jeanne';
 
 export type WorldEvent =
   | { type: 'hit'; x: number; y: number; side: Side; multiplier: number; charge: boolean }
@@ -80,7 +86,8 @@ export type WorldEvent =
   | { type: 'whistle' }
   | { type: 'dialog'; key: string }
   | { type: 'guarded'; x: number; y: number }
-  | { type: 'levelUp'; level: number };
+  | { type: 'levelUp'; level: number }
+  | { type: 'jeanneDanger' };
 
 export interface Arrow {
   x: number;
@@ -105,6 +112,8 @@ export class World {
   readonly obstacles: { x: number; y: number; r: number }[];
   readonly terrain: Terrain;
   readonly hero: Hero;
+  /** ジャンヌ（出ないステージ・練習場では null） */
+  readonly jeanne: Jeanne | null;
   /** 敵の大将と、大将だけの部隊 */
   general: Unit | null = null;
   generalSquad: Squad | null = null;
@@ -139,6 +148,7 @@ export class World {
   /** 集合の笛の効果が残っている秒数 */
   recallTime = 0;
   outcome: Outcome = 'playing';
+  lostBy: LostBy | null = null;
   /** 移動の入力（長さ0〜1） */
   input = { x: 0, y: 0 };
   /** ジャンの進行方向（単位ベクトル） */
@@ -181,6 +191,8 @@ export class World {
     this.reviveEnabled = d?.revive ?? true;
     this.reviveSeconds = d?.reviveSeconds ?? this.data.ai.waitingReviveSeconds;
     this.units.push(this.hero);
+    this.jeanne = cfg.jeanne ? new Jeanne(this.nextId++, this.data.kinds.jeanne, cfg.jeanne.x, cfg.jeanne.y) : null;
+    if (this.jeanne) this.units.push(this.jeanne);
     if (cfg.heroDir) [this.headX, this.headY] = cfg.heroDir;
     for (const s of cfg.squads) this.addSquad(s);
     for (const c of cfg.carriedSquads ?? []) this.addCarriedSquad(c, cfg.hero.x, cfg.hero.y);
@@ -235,6 +247,7 @@ export class World {
     this.time += dt;
     this.grid.rebuild(this.aliveUnits());
     this.updateHero(dt);
+    this.updateJeanne(dt);
     this.recallTime = Math.max(0, this.recallTime - dt);
     this.returnWipedSquads();
     this.updateRecruit();
@@ -300,7 +313,7 @@ export class World {
 
   /** 1人の相手に同時に斬りかかれる人数（ジャンが全員に囲まれないように） */
   maxAttackers(o: Unit): number {
-    return o.kind === 'hero' ? this.data.ai.maxAttackersOnHero : this.data.ai.maxAttackersOnSoldier;
+    return isLeader(o) ? this.data.ai.maxAttackersOnHero : this.data.ai.maxAttackersOnSoldier;
   }
 
   /** u の狙いを t に変え、斬りかかっている人数を数え直す（近接だけ数える） */
@@ -326,23 +339,30 @@ export class World {
     return u.squad?.mode === 'neutral' || !!u.squad?.waiting;
   }
 
-  /** 狙う相手を選ぶときの距離（体の大きさを引き、ジャンは少し遠い扱い） */
+  /** 狙う相手を選ぶときの距離（体の大きさを引き、ジャンとジャンヌは少し遠い扱い） */
   targetDistance(x: number, y: number, o: Unit): number {
-    return dist(x, y, o.x, o.y) - o.radius + (o.kind === 'hero' ? this.data.ai.heroTargetPenalty : 0);
+    return dist(x, y, o.x, o.y) - o.radius + (isLeader(o) ? this.data.ai.heroTargetPenalty : 0);
+  }
+
+  /** u がジャンヌのまわりにいて、攻撃が上がるか（ジャンヌ本人は除く） */
+  inJeanneAura(u: Unit): boolean {
+    const j = this.jeanne;
+    if (!j || j.dead || u === j || u.side !== 'ally') return false;
+    return dist(u.x, u.y, j.x, j.y) <= (j.stats.auraRadius ?? 0);
   }
 
   // ---- 成長 ----
 
   /**
    * 敵を倒したときの経験値。ジャンが倒せば全部、率いている部隊が倒せばその半分。
-   * 大将は30、兵士は1（隊長は5。まだ出てこない）
+   * ジャンヌが倒したときも半分。大将は30、兵士は1（隊長は5。まだ出てこない）
    */
   private gainXpFor(foe: Unit, by: Unit): void {
     const per = GROWTH.xp.perKill;
     const base = foe.kind === 'general' ? per.general : per.soldier;
     let gain = 0;
     if (by === this.hero) gain = base;
-    else if (by.side === 'ally' && by.squad?.mode === 'follow') gain = base * GROWTH.xp.squadKillRatio;
+    else if (by === this.jeanne || (by.side === 'ally' && by.squad?.mode === 'follow')) gain = base * GROWTH.xp.squadKillRatio;
     if (gain <= 0) return;
     this.xpGained += gain;
     const r = addXp(this.level, this.xp, gain);
@@ -662,7 +682,9 @@ export class World {
       return;
     }
     const charging = attacker.chargeReady;
-    const r = computeDamage(this.data, attacker.kind, target.kind, { attack: attacker.attack, charging });
+    // ジャンヌのまわりの味方は攻撃が上がる
+    const aura = this.inJeanneAura(attacker) ? 1 + (this.jeanne!.stats.auraBonus ?? 0) : 1;
+    const r = computeDamage(this.data, attacker.kind, target.kind, { attack: attacker.attack * aura, charging });
     attacker.chargeReady = false;
     attacker.moveTime = 0;
     if (attacker.stats.stopsCharge) {
@@ -671,7 +693,7 @@ export class World {
     }
     target.hp -= target === this.hero ? r.damage * this.damageTaken : r.damage;
     target.hitFlash = 0.12;
-    if (target instanceof Hero) {
+    if (target instanceof Hero || target instanceof Jeanne) {
       target.sinceHit = 0;
     } else {
       const kb = target.kind === 'general' ? this.data.combat.knockbackHeavy : this.data.combat.knockback;
@@ -760,6 +782,17 @@ export class World {
     }
   }
 
+  /** ジャンヌを動かし、HP が少なくなったら一度だけ知らせる（回復したら、また知らせる） */
+  private updateJeanne(dt: number): void {
+    const j = this.jeanne;
+    if (!j || j.dead) return;
+    updateJeanne(this, j, dt);
+    const low = j.hp < j.maxHp * this.data.ai.jeanne.lowHpRatio;
+    if (low && !j.warned) this.events.push({ type: 'jeanneDanger' });
+    if (low) j.warned = true;
+    else if (j.hp >= j.maxHp * 0.7) j.warned = false;
+  }
+
   /** 重なった兵士どうしを押し広げ、場外に出ないようにする */
   private separate(): void {
     this.grid.rebuild(this.aliveUnits());
@@ -830,7 +863,15 @@ export class World {
 
   private checkOutcome(): void {
     if (this.outcome !== 'playing') return;
-    if (this.hero.dead) this.outcome = 'lost';
+    if (this.hero.dead || this.jeanne?.dead) {
+      this.outcome = 'lost';
+      this.lostBy = this.hero.dead ? 'hero' : 'jeanne';
+    }
     else if (!this.script && this.countAlive('enemy') === 0) this.outcome = 'won';
   }
+}
+
+/** ジャン・ジャンヌ（兵士より後回しに狙われ、同時に斬りかかれる人数が別に決まっている） */
+function isLeader(u: Unit): boolean {
+  return u.kind === 'hero' || u.kind === 'jeanne';
 }

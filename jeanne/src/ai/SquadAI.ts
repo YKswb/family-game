@@ -70,7 +70,7 @@ function moveTo(u: Unit, tx: number, ty: number, speed: number, dt: number, stop
 }
 
 /** 川などをまたぐときは橋を経由して進む */
-function navMove(w: World, u: Unit, tx: number, ty: number, speed: number, dt: number, stopAt = 2): void {
+export function navMove(w: World, u: Unit, tx: number, ty: number, speed: number, dt: number, stopAt = 2): void {
   const p = w.terrain.waypoint(u.x, u.y, tx, ty);
   if (p.x === tx && p.y === ty) moveTo(u, tx, ty, speed, dt, stopAt);
   else moveTo(u, p.x, p.y, speed, dt);

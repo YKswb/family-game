@@ -167,6 +167,8 @@ export interface StageStats {
   followingAtBoss: number;
   /** 待機部隊のそばにいたフレーム数（補充しに行った目安） */
   refillFrames: number;
+  /** ジャンヌの HP がいちばん減ったときの割合（ジャンヌがいなければ 1） */
+  jeanneMinRatio: number;
 }
 
 /**
@@ -182,15 +184,20 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
   let whistles = 0;
   let broken: string | null = null;
   const dialogs: string[] = [];
+  let jeanneMin = 1;
 
   while (w.outcome === 'playing' && w.time < maxSeconds) {
     const h = w.hero;
-    if (!retreating && h.hp < h.maxHp * 0.35) {
+    const j = w.jeanne;
+    // ジャンかジャンヌの HP が少なくなったら、笛で仲間を呼び戻して下がる
+    const jRatio = j ? j.hp / j.maxHp : 1;
+    jeanneMin = Math.min(jeanneMin, jRatio);
+    if (!retreating && (h.hp < h.maxHp * 0.35 || jRatio < 0.35)) {
       retreating = true;
       w.whistle();
       whistles++;
     }
-    if (retreating && h.hp > h.maxHp * 0.8) retreating = false;
+    if (retreating && h.hp > h.maxHp * 0.8 && jRatio > 0.8) retreating = false;
 
     let tx = startX;
     let ty = startY;
@@ -260,7 +267,7 @@ export function runStageBot(w: World, maxSeconds = 900, dt = 1 / 60): StageStats
   const following = w.followingSquads().flatMap((s) => s.alive);
   const near = following.filter((u) => Math.hypot(u.x - w.hero.x, u.y - w.hero.y) < 500).length;
   const recruited = w.squads.filter((s) => s.side === 'ally' && (s.mode === 'follow' || s.waiting)).length;
-  return { seconds: w.time, broken, recruited, whistles, dialogs, nearHeroRatio: following.length ? near / following.length : 1, followingAtBoss, refillFrames: refillsDone };
+  return { seconds: w.time, broken, recruited, whistles, dialogs, nearHeroRatio: following.length ? near / following.length : 1, followingAtBoss, refillFrames: refillsDone, jeanneMinRatio: jeanneMin };
 }
 
 function nearestSquad(w: World, pred: (s: World['squads'][number]) => boolean): World['squads'][number] | null {

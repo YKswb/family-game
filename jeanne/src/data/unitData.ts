@@ -102,6 +102,17 @@ export interface UnitData {
     patrolSpeed: number;
     /** 待機している部隊に、兵士が1人戻ってくるまでの秒数 */
     waitingReviveSeconds: number;
+    /** ジャンヌの動き */
+    jeanne: {
+      /** ジャンのこれだけ後ろを付いて歩く */
+      followBehind: number;
+      /** この距離以内に来た敵と戦う */
+      engageRadius: number;
+      /** 付いて歩く位置からこれ以上離れたら、戦いをやめて戻る */
+      leash: number;
+      /** HP がこの割合を切ったら戦わずにジャンの後ろへ下がり、知らせを出す */
+      lowHpRatio: number;
+    };
   };
 }
 

@@ -11,7 +11,8 @@ import { stageConfig } from '../systems/Stage';
 import { World, type WorldEvent } from '../systems/World';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
-import { drawField } from '../ui/FieldView';
+import { fieldItems } from '../ui/FieldView';
+import { GroundTiles } from '../ui/GroundTiles';
 import { DPR, TEXT, VIEW_H, VIEW_W, WORLD_ZOOM, fmt, textStyle } from '../ui/Display';
 import { Hud, compositionText } from '../ui/Hud';
 import { Joystick } from '../ui/Joystick';
@@ -76,6 +77,7 @@ export class BattleScene extends Phaser.Scene {
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private unitGfx!: Phaser.GameObjects.Graphics;
   private fxGfx!: Phaser.GameObjects.Graphics;
+  private ground!: GroundTiles;
   private hud!: Hud;
   private minimap: Minimap | null = null;
   private joystick!: Joystick;
@@ -138,7 +140,7 @@ export class BattleScene extends Phaser.Scene {
     this.unitGfx = this.toWorld(this.add.graphics());
     this.fxGfx = this.toWorld(this.add.graphics());
 
-    this.hud = new Hud(this);
+    this.hud = new Hud(this, !!this.world.jeanne);
     this.toUi(...this.hud.objects);
     this.joystick = new Joystick(this);
     this.toUi(this.joystick.gfx);
@@ -165,6 +167,7 @@ export class BattleScene extends Phaser.Scene {
     this.camX = this.world.hero.x;
     this.camY = this.world.hero.y;
     this.updateCamera(1);
+    this.ground.update(this.viewRect());
 
     // 自動テストやデバッグ用に外から覗けるようにしておく
     (window as unknown as { __jeanne: unknown }).__jeanne = { scene: this, world: this.world };
@@ -192,6 +195,7 @@ export class BattleScene extends Phaser.Scene {
     this.minimap?.update(w, this.viewRect());
     this.joystick.draw();
     this.updateCamera(dt);
+    this.ground.update(this.viewRect());
   }
 
   // ---- 入力 ----
@@ -209,10 +213,13 @@ export class BattleScene extends Phaser.Scene {
 
   // ---- 描画 ----
 
+  /** 地面は区画ごとの絵にして、見えている所だけ並べる（毎フレーム図形を組み立て直さない） */
   private drawGround(): void {
-    const g = this.toWorld(this.add.graphics());
     const terrain = this.mode === 'stage' ? STAGES[this.stageId].stage.terrain : null;
-    drawField(g, this.world.width, this.world.height, this.world.obstacles, terrain, new Random(7));
+    const w = this.world;
+    const items = fieldItems(w.width, w.height, w.obstacles, terrain, new Random(7));
+    this.ground = new GroundTiles(this, w.width, w.height, items, DPR * WORLD_ZOOM, -10, (rt) => this.toWorld(rt));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.ground.destroy());
   }
 
   /** いま見えている戦場の範囲（カメラは左上を原点に拡大しているので、Phaser の worldView は使わない） */
@@ -257,8 +264,7 @@ export class BattleScene extends Phaser.Scene {
           const label = this.labelFor(key);
           shown.add(key);
           const c = centerOf(g.units);
-          label.setText(`${UNIT_DATA.kinds[g.kind].short}${g.units.length}`);
-          label.setColor('#bcd6ff');
+          setLabel(label, `${UNIT_DATA.kinds[g.kind].short}${g.units.length}`, '#bcd6ff');
           label.setPosition(c.x, c.y - 40);
         }
         continue;
@@ -271,24 +277,19 @@ export class BattleScene extends Phaser.Scene {
       if (sq === w.generalSquad) {
         const name = STAGES[this.stageId].stage.general?.name ?? stats.name;
         const n = w.guardsLeft();
-        label.setText(n > 0 ? fmt(TEXT.generalGuardedLabel, { name, n }) : name);
-        label.setColor('#ffcc1f');
+        setLabel(label, n > 0 ? fmt(TEXT.generalGuardedLabel, { name, n }) : name, '#ffcc1f');
         label.setPosition(c.x, c.y - 84);
       } else if (sq.mode === 'neutral') {
-        label.setText(`${stats.name}\n${TEXT.flag}`);
-        label.setColor('#ffffff');
+        setLabel(label, `${stats.name}\n${TEXT.flag}`, '#ffffff');
         label.setPosition(c.x, c.y - 96);
       } else if (sq.waiting) {
-        label.setText(`${compositionText(sq)} ${TEXT.waiting}`);
-        label.setColor('#d6e4ff');
+        setLabel(label, `${compositionText(sq)} ${TEXT.waiting}`, '#d6e4ff');
         label.setPosition(c.x, c.y - 40);
       } else if (w.isGuardSquad(sq)) {
-        label.setText(fmt(TEXT.guardLabel, { comp: compositionText(sq) }));
-        label.setColor('#ffcc1f');
+        setLabel(label, fmt(TEXT.guardLabel, { comp: compositionText(sq) }), '#ffcc1f');
         label.setPosition(c.x, c.y - 40);
       } else {
-        label.setText(compositionText(sq));
-        label.setColor(sq.side === 'ally' ? '#bcd6ff' : '#ffc4bd');
+        setLabel(label, compositionText(sq), sq.side === 'ally' ? '#bcd6ff' : '#ffc4bd');
         label.setPosition(c.x, c.y - 40);
       }
     }
@@ -313,7 +314,8 @@ export class BattleScene extends Phaser.Scene {
 
   private updateCamera(dt: number): void {
     const h = this.world.hero;
-    const k = Math.min(1, dt * 6);
+    // カメラはジャンを少し遅れて追う（遅れが大きいと動きが重く感じる）
+    const k = Math.min(1, dt * 9);
     this.camX += (h.x - this.camX) * k;
     this.camY += (h.y - this.camY) * k;
     const vw = VIEW_W / WORLD_ZOOM;
@@ -385,6 +387,9 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'revive':
         this.burst(e.x, e.y - 14, 0x9fc3ff, 10, 120, 4);
+        break;
+      case 'jeanneDanger':
+        this.showBanner(TEXT.jeanneDanger, '#ff9ec4');
         break;
       case 'reinforce': {
         this.showBanner(fmt(TEXT.reinforced, { n: e.count }), '#ffd84d');
@@ -543,6 +548,8 @@ export class BattleScene extends Phaser.Scene {
     if (!lines) return;
     this.joystick.release();
     this.dialog.show(lines, story.speakers, () => {
+      // 始まりの会話のあとに、ジャンヌを守ることを知らせる
+      if (key === 'start' && this.world.jeanne) this.showBanner(TEXT.protectJeanne, '#ffe9f2', 32);
       const next = this.dialogQueue.shift();
       if (next) this.openDialog(next);
     });
@@ -728,12 +735,12 @@ export class BattleScene extends Phaser.Scene {
       objs.push(this.add.text(VIEW_W / 2, y, s, textStyle(size, color, false)).setOrigin(0.5).setDepth(1102));
     };
     const stage = this.mode === 'stage';
-    text(VIEW_H / 2 - 160, won ? (stage ? TEXT.stageClear : TEXT.win) : TEXT.lose, 52, won ? '#d94f3a' : '#3b4a66');
+    text(VIEW_H / 2 - 160, won ? (stage ? TEXT.stageClear : TEXT.win) : w.lostBy === 'jeanne' ? TEXT.loseJeanne : TEXT.lose, 52, won ? '#d94f3a' : '#3b4a66');
     const survivors = this.mode === 'duel' ? w.countAlive('ally') : w.countFollowing();
     if (stage) {
       const s = Math.floor(w.time);
       const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-      text(VIEW_H / 2 - 80, `${TEXT.clearTime}  ${time}`, 30, '#2b2418');
+      text(VIEW_H / 2 - 80, `${won ? TEXT.clearTime : TEXT.time}  ${time}`, 30, '#2b2418');
       text(VIEW_H / 2 - 35, `${TEXT.survivorsShort}  ${survivors}　${TEXT.kills}  ${w.kills}`, 30, '#2b2418');
     } else {
       text(VIEW_H / 2 - 60, fmt(TEXT.survivors, { n: survivors }), 30, '#2b2418');
@@ -776,6 +783,15 @@ export class BattleScene extends Phaser.Scene {
   private toUi(...objs: Phaser.GameObjects.GameObject[]): void {
     this.cameras.main.ignore(objs);
   }
+}
+
+/**
+ * 名札の文字と色を変える。Phaser の Text は色を設定するたびに文字を描き直すので、
+ * 変わったときだけ設定する（毎フレーム描き直すと iPad で重い）
+ */
+function setLabel(label: Phaser.GameObjects.Text, text: string, color: string): void {
+  label.setText(text);
+  if (label.style.color !== color) label.setColor(color);
 }
 
 /** 兵士の位置の平均 */

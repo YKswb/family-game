@@ -5,44 +5,89 @@ import type { Random } from '../systems/Random';
 
 type Terrain = StageData['terrain'];
 
+/** 道の色（土の色 0xcdb482 を草地に 55% で重ねた色） */
+const ROAD_COLOR = 0xa3b46c;
+
+/** 地面に描くもの1つ。描く範囲（はみ出さない四角）と描き方 */
+export interface FieldItem {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  draw: (g: Phaser.GameObjects.Graphics) => void;
+}
+
 /**
- * 戦場の地面と地形（動かないもの）を一度だけ描く。
+ * 戦場の地面と地形（動かないもの）を、描く順に並べて返す。
  * 道・川・橋・家・テントは見た目、川と森は当たり判定もある（World 側で扱う）
  */
-export function drawField(
-  g: Phaser.GameObjects.Graphics,
+export function fieldItems(
   width: number,
   height: number,
   forests: readonly { x: number; y: number; r: number }[],
   terrain: Terrain | null,
   rng: Random,
-): void {
+): FieldItem[] {
+  const items: FieldItem[] = [];
+  const box = (x: number, y: number, hw: number, hh: number, draw: FieldItem['draw']) =>
+    items.push({ x0: x - hw, y0: y - hh, x1: x + hw, y1: y + hh, draw });
+
   const area = (width * height) / (2400 * 1600);
-  g.fillStyle(0x6fb352, 1);
-  g.fillRect(0, 0, width, height);
-  g.fillStyle(0x3c7832, 0.22);
-  for (let i = 0; i < 30 * area; i++) g.fillEllipse(rng.range(0, width), rng.range(0, height), rng.range(160, 440), rng.range(100, 280));
+  items.push({
+    x0: 0,
+    y0: 0,
+    x1: width,
+    y1: height,
+    draw: (g) => {
+      g.fillStyle(0x6fb352, 1);
+      g.fillRect(0, 0, width, height);
+    },
+  });
+  for (let i = 0; i < 30 * area; i++) {
+    const x = rng.range(0, width);
+    const y = rng.range(0, height);
+    const w = rng.range(160, 440);
+    const h = rng.range(100, 280);
+    box(x, y, w / 2, h / 2, (g) => {
+      g.fillStyle(0x3c7832, 0.22);
+      g.fillEllipse(x, y, w, h);
+    });
+  }
   for (let i = 0; i < 700 * area; i++) {
-    g.fillStyle(i % 2 ? 0x5f9a45 : 0x7db85c, 1);
+    const color = i % 2 ? 0x5f9a45 : 0x7db85c;
     const s = rng.range(3, 7);
-    g.fillEllipse(rng.range(0, width), rng.range(0, height), s * 2, s);
+    const x = rng.range(0, width);
+    const y = rng.range(0, height);
+    box(x, y, s, s / 2, (g) => {
+      g.fillStyle(color, 1);
+      g.fillEllipse(x, y, s * 2, s);
+    });
   }
   const flowers = [0xffffff, 0xffd84d, 0xff9ec4];
   for (let i = 0; i < 120 * area; i++) {
-    g.fillStyle(flowers[i % 3], 1);
-    g.fillCircle(rng.range(0, width), rng.range(0, height), 3);
+    const color = flowers[i % 3];
+    const x = rng.range(0, width);
+    const y = rng.range(0, height);
+    box(x, y, 3, 3, (g) => {
+      g.fillStyle(color, 1);
+      g.fillCircle(x, y, 3);
+    });
   }
 
   if (terrain) {
-    for (const road of terrain.roads) drawRoad(g, road);
-    for (const r of terrain.rivers) drawRiver(g, r);
-    for (const w of terrain.walls) drawWall(g, w);
-    for (const b of terrain.bridges) drawBridge(g, b);
-    for (const gt of terrain.gates) drawBridge(g, gt);
+    for (const road of terrain.roads) {
+      const xs = road.map((p) => p[0]);
+      const ys = road.map((p) => p[1]);
+      items.push({ x0: Math.min(...xs) - 32, y0: Math.min(...ys) - 32, x1: Math.max(...xs) + 32, y1: Math.max(...ys) + 32, draw: (g) => drawRoad(g, road) });
+    }
+    for (const r of terrain.rivers) items.push({ ...rectBox(r, 6), draw: (g) => drawRiver(g, r) });
+    for (const w of terrain.walls) items.push({ ...rectBox(w, 2), draw: (g) => drawWall(g, w) });
+    for (const b of terrain.bridges) items.push({ ...rectBox(b, 3), draw: (g) => drawBridge(g, b) });
+    for (const gt of terrain.gates) items.push({ ...rectBox(gt, 3), draw: (g) => drawBridge(g, gt) });
   }
 
   // 家・テント・木は、下にあるものほど手前に見えるよう y の順に描く
-  const things: { y: number; draw: () => void }[] = [];
+  const things: { y: number; item: FieldItem }[] = [];
   for (const o of forests) {
     const n = Math.round(o.r / 9);
     for (let i = 0; i < n; i++) {
@@ -51,22 +96,28 @@ export function drawField(
       const x = o.x + Math.cos(a) * d;
       const y = o.y + Math.sin(a) * d * 0.8 + 20;
       const s = rng.range(0.85, 1.2);
-      things.push({ y, draw: () => drawTree(g, x, y, s) });
+      things.push({ y, item: { x0: x - 32 * s, y0: y - 62 * s, x1: x + 32 * s, y1: y + 10 * s, draw: (g) => drawTree(g, x, y, s) } });
     }
   }
   if (terrain) {
-    for (const h of terrain.houses) things.push({ y: h.y, draw: () => drawHouse(g, h.x, h.y) });
-    for (const t of terrain.tents) things.push({ y: t.y, draw: () => drawTent(g, t.x, t.y) });
+    for (const h of terrain.houses) things.push({ y: h.y, item: { x0: h.x - 48, y0: h.y - 86, x1: h.x + 48, y1: h.y + 16, draw: (g) => drawHouse(g, h.x, h.y) } });
+    for (const t of terrain.tents) things.push({ y: t.y, item: { x0: t.x - 46, y0: t.y - 78, x1: t.x + 46, y1: t.y + 18, draw: (g) => drawTent(g, t.x, t.y) } });
   }
   things.sort((a, b) => a.y - b.y);
-  for (const t of things) t.draw();
+  for (const t of things) items.push(t.item);
+  return items;
+}
+
+function rectBox(r: { x: number; y: number; w: number; h: number }, m: number) {
+  return { x0: r.x - m, y0: r.y - m, x1: r.x + r.w + m, y1: r.y + r.h + m };
 }
 
 function drawRoad(g: Phaser.GameObjects.Graphics, pts: [number, number][]): void {
-  // 太い線のつなぎ目に隙間ができないよう、角に円を置く
-  g.lineStyle(64, 0xcdb482, 0.55);
+  // 太い線のつなぎ目に隙間ができないよう、角に円を置く。
+  // 半透明だと重なった所が濃く見えるので、草地と混ぜた色を不透明で塗る
+  g.lineStyle(64, ROAD_COLOR, 1);
   for (let i = 1; i < pts.length; i++) g.lineBetween(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
-  g.fillStyle(0xcdb482, 0.55);
+  g.fillStyle(ROAD_COLOR, 1);
   for (let i = 1; i < pts.length - 1; i++) g.fillCircle(pts[i][0], pts[i][1], 32);
 }
 

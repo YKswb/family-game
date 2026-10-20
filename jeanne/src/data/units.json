@@ -72,12 +72,14 @@
     "jeanne": {
       "name": "ジャンヌ",
       "short": "ジャンヌ",
-      "hp": 40,
-      "attack": 0,
-      "interval": 1,
-      "reach": 0,
-      "speed": 120,
+      "hp": 60,
+      "attack": 2,
+      "interval": 0.7,
+      "reach": 14,
+      "speed": 140,
       "radius": 10,
+      "regenDelay": 3,
+      "regenPerSecond": 2,
       "auraRadius": 300,
       "auraBonus": 0.2
     }
@@ -137,6 +139,12 @@
     "archerLineMargin": 12,
     "headingTurnRate": 5,
     "patrolSpeed": 50,
-    "waitingReviveSeconds": 6
+    "waitingReviveSeconds": 6,
+    "jeanne": {
+      "followBehind": 40,
+      "engageRadius": 70,
+      "leash": 130,
+      "lowHpRatio": 0.35
+    }
   }
 }
