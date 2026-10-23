@@ -48,6 +48,12 @@
     { "id": "gilles", "side": "ally", "mode": "hold", "kind": "sword", "count": 10, "x": 1250, "y": 2600, "dir": [0, -1], "route": [[1250, 2600], [1300, 1800], [1650, 1150]], "speed": 40, "leader": { "name": "ジル・ド・レ", "hp": 50, "attack": 4 } },
     { "id": "laHire", "side": "ally", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2650, "y": 2600, "dir": [0, -1], "route": [[2650, 2600], [2500, 1900], [2000, 1180]], "speed": 45, "leader": { "name": "ラ・イール", "hp": 50, "attack": 4 } },
 
+    { "id": "dunois", "side": "ally", "mode": "hold", "kind": "spear", "count": 10, "x": 450, "y": 2450, "dir": [0, -1], "route": [[450, 2450], [600, 1850], [1000, 1550], [1500, 1150]], "speed": 40, "leader": { "name": "デュノワ", "hp": 50, "attack": 4 } },
+    { "id": "citizens", "side": "ally", "mode": "hold", "kind": "sword", "count": 10, "x": 3250, "y": 2500, "dir": [0, -1], "route": [[3250, 2500], [3000, 1850], [2450, 1550], [2150, 1150]], "speed": 40, "leader": { "name": "町の兵の隊長" } },
+
+    { "id": "roadSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 1800, "y": 1800, "dir": [0, 1] },
+    { "id": "augArcher2", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 1000, "y": 1100, "dir": [0, 1] },
+    { "id": "augArcher3", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 2600, "y": 1100, "dir": [0, 1] },
     { "id": "augSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 1200, "y": 1500, "dir": [0, 1] },
     { "id": "augSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2400, "y": 1500, "dir": [0, 1] },
     { "id": "augArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 1800, "y": 1420, "dir": [0, 1] },
@@ -78,7 +84,9 @@
         { "dialog": "gate" },
         { "march": [
           { "squad": "gilles", "route": [[1760, 1000], [1760, 780], [1600, 620]] },
-          { "squad": "laHire", "route": [[1840, 1000], [1840, 780], [2000, 620]] }
+          { "squad": "laHire", "route": [[1840, 1000], [1840, 780], [2000, 620]] },
+          { "squad": "dunois", "route": [[1770, 1000], [1700, 780], [1450, 700]] },
+          { "squad": "citizens", "route": [[1830, 1000], [1900, 780], [2150, 700]] }
         ] }
       ] },
     { "id": "arrow", "when": { "after": { "event": "gate", "seconds": 12 } }, "do": [{ "dialog": "arrow" }, { "jeanne": "leave" }] },

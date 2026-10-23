@@ -66,10 +66,10 @@ describe.each(Object.keys(STAGES))('%s のデータ', (key) => {
     }
   });
 
-  it('敵の部隊は 8〜12 隊（援軍を含む）', () => {
+  it('敵の部隊は 8〜15 隊（援軍を含む。味方NPCを増やした分だけ増やした）', () => {
     const enemies = allSquads.filter((s) => s.side === 'enemy').length;
     expect(enemies).toBeGreaterThanOrEqual(8);
-    expect(enemies).toBeLessThanOrEqual(12);
+    expect(enemies).toBeLessThanOrEqual(15);
   });
 });
 
