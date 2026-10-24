@@ -396,6 +396,8 @@ export interface StageTheme {
   snow?: boolean;
   /** 霧：画面の真ん中から、短い辺のこの割合より外を白くかすませる（見える範囲がせまくなる） */
   mist?: number;
+  /** BGM の曲名（data/music.json）。なければ森の曲 */
+  music?: string;
 }
 
 export interface SpotSpec {

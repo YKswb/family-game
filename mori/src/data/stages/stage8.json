@@ -5,6 +5,7 @@
   "towers": ["arrow", "cannon", "ice", "lightning", "heal"],
   "reward": 60,
   "theme": {
+    "music": "castle",
     "background": "#14241a",
     "ground": "#4f7a52",
     "tuft": ["#456d48", "#5d8a5f"],

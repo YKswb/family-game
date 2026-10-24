@@ -34,6 +34,8 @@ window.addEventListener('orientationchange', () => setTimeout(fit, 250));
 for (const type of ['pointerdown', 'touchend', 'keydown']) {
   window.addEventListener(type, () => sound.unlock(), { capture: true, passive: true });
 }
+// 画面が隠れたら音を止める（アプリを切り替えたとき）
+document.addEventListener('visibilitychange', () => sound.onVisibility(document.hidden));
 // HTML のボタンを押したときの音。data-sfx で音を変えられる（なければ「tap」）
 document.addEventListener(
   'click',

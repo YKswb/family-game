@@ -183,7 +183,7 @@ mori/
     systems/               World, Combat, Waves, Build, Level, Upgrades, Save
     entities/              Player, Companion（仲間）, Enemy, Tree, House（とうとかべは systems/Build の Spot）
     views/                 各エンティティの描画と演出
-    ui/                    Hud, Joystick, Dialog, Overlay（3択・結果）, Menus, Sound（効果音）
+    ui/                    Hud, Joystick, Dialog, Overlay（3択・結果）, Menus, Sound（効果音）, Music（BGM）
     data/
       towers.json          とうの数値と分かれ道
       enemies.json         敵の数値と特徴
@@ -193,6 +193,7 @@ mori/
       difficulty.json      難易度の倍率
       text.json            画面の文言
       sounds.json          効果音（Web Audio で合成する短い音）
+      music.json           BGM（曲ごとのメロディー・低音・打楽器）
       stages/stage1.json … stage8.json, endless.json, practice.json（テスト用）
       story/stage1.json … stage8.json, speakers.json（話し手）
   tests/                   vitest（ユニットテストと自動プレイ）

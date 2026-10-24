@@ -91,6 +91,8 @@
   "quit": "家に もどる",
   "pause": "ひとやすみ",
   "resume": "つづける",
+  "bgmOn": "🎵 BGM：オン",
+  "bgmOff": "🎵 BGM：オフ",
   "retry": "もういちど",
   "clear": "クリア！",
   "clearLead": "おうちを 守りきったよ！",

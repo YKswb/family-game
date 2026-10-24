@@ -10,7 +10,8 @@ import { Hud } from '../ui/Hud';
 import { Dialog } from '../ui/Dialog';
 import { Joystick } from '../ui/Joystick';
 import { Overlay } from '../ui/Overlay';
-import { sound, type SoundName } from '../ui/Sound';
+import { music, type TrackName } from '../ui/Music';
+import { bindSoundButton, sound, type SoundName } from '../ui/Sound';
 import { Effects } from '../views/Effects';
 import { drawEnemyHp, enemyLift } from '../views/EnemyView';
 import { FRIEND_LIFT } from '../systems/Companions';
@@ -185,11 +186,9 @@ export class BattleScene extends Phaser.Scene {
     this.overlay.callBtn.onclick = () => this.world.callNow();
     this.overlay.pauseBtn.onclick = () => this.pause();
     this.overlay.friendBtn.onclick = () => this.world.toggleCompanionMode();
-    this.overlay.soundBtn.onclick = () => {
-      sound.setMuted(!sound.muted);
-      this.updateSoundButton();
-    };
-    this.updateSoundButton();
+    bindSoundButton(this.overlay.soundBtn);
+    this.overlay.soundBtn.classList.remove('solo');
+    music.play(this.stageTrack());
 
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
     // パソコンでは C キーで仲間への命令を切り替える
@@ -231,6 +230,7 @@ export class BattleScene extends Phaser.Scene {
     if (w.outcome !== 'playing' && !this.resultShown) {
       this.resultShown = true;
       this.joystick.release();
+      music.stop();
       sound.play(w.outcome === 'won' ? 'win' : 'lose');
       // クリアしたら、物語の会話のあとで結果を出す
       const clear = w.outcome === 'won' ? this.story?.clear : undefined;
@@ -315,6 +315,16 @@ export class BattleScene extends Phaser.Scene {
       lines: [w.stage.name, `${fmt(TEXT.level, { lv: w.level })}・${w.diff.name}`],
       buttons: [
         { label: TEXT.resume, onTap: () => (this.paused = false) },
+        {
+          label: music.enabled ? TEXT.bgmOn : TEXT.bgmOff,
+          secondary: true,
+          onTap: () => {
+            // 切り替えたら、ひとやすみの画面を出し直す
+            music.setEnabled(!music.enabled);
+            this.paused = false;
+            this.pause();
+          },
+        },
         { label: TEXT.quit, secondary: true, onTap: () => this.goHome() },
       ],
     });
@@ -328,10 +338,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 会話を出す（出ている間は戦場が止まる）。指が画面に残っていたら離した扱いにする */
-  private updateSoundButton(): void {
-    const b = this.overlay.soundBtn;
-    b.textContent = sound.muted ? '🔇' : '🔊';
-    b.setAttribute('aria-pressed', String(!sound.muted));
+  /** このステージの BGM */
+  private stageTrack(): TrackName {
+    return (this.stage.theme.music ?? 'forest') as TrackName;
   }
 
   private talk(lines: StoryLine[], onDone: () => void = () => {}): void {
@@ -931,10 +940,13 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'death':
         sound.play(e.enemy.stats.boss ? 'bossDown' : 'pop');
+        // ボスが残っていなければ、ステージの曲に戻す
+        if (e.enemy.stats.boss && !this.world.enemies.some((x) => x !== e.enemy && x.stats.boss && !x.dead)) music.play(this.stageTrack());
         break;
       case 'spawn':
         if (e.enemy.kind === 'boss') sound.play('bossCame');
         if (e.enemy.kind === 'maou') sound.play('maouCame');
+        if (e.enemy.stats.boss) music.play('boss');
         break;
       case 'shoot':
         if (e.spot.kind === 'arrow') sound.play('shootArrow');

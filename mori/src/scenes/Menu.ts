@@ -6,6 +6,8 @@ import { SaveStore, newSave, type SaveData } from '../systems/Save';
 import { DPR, TEXT, hex, screenSize } from '../ui/Display';
 import { Menus } from '../ui/Menus';
 import { Overlay } from '../ui/Overlay';
+import { music } from '../ui/Music';
+import { bindSoundButton } from '../ui/Sound';
 import { GRASS_SCALE, TEX_SCALE, Textures } from '../views/Textures';
 import { Weather } from '../views/Weather';
 
@@ -44,6 +46,8 @@ export class MenuScene extends Phaser.Scene {
     this.overlay.pauseBtn.classList.add('hide');
     this.overlay.callBtn.classList.add('hide');
     this.overlay.friendBtn.classList.add('hide');
+    bindSoundButton(this.overlay.soundBtn);
+    music.play('menu');
     const theme = STAGES[0].theme;
     this.cameras.main.setOrigin(0, 0).setBackgroundColor(theme.background);
     this.tex = new Textures(this, theme, GAME_DATA.towers, GAME_DATA.enemies);
@@ -98,6 +102,9 @@ export class MenuScene extends Phaser.Scene {
 
   private show(screen: MenuScreen): void {
     this.screen = screen;
+    // 音のボタンはタイトルだけに出す（ほかの画面ではカードと重なるため）
+    this.overlay.soundBtn.classList.toggle('hide', screen !== 'title');
+    this.overlay.soundBtn.classList.add('solo');
     if (screen === 'title') {
       this.menus.showTitle(
         this.store.exists(),

@@ -5,6 +5,7 @@
   "towers": ["arrow", "cannon", "ice", "lightning"],
   "reward": 42,
   "theme": {
+    "music": "adventure",
     "background": "#2f4a2a",
     "ground": "#6e8f5a",
     "tuft": ["#5f7f4c", "#7f9f66"],

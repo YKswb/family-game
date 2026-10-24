@@ -1,3 +1,4 @@
+import musicJson from '../data/music.json';
 import soundsJson from '../data/sounds.json';
 
 export type SoundName = keyof typeof soundsJson.sounds;
@@ -20,6 +21,7 @@ interface SoundDef {
 const SOUNDS = soundsJson.sounds as Record<SoundName, SoundDef>;
 /** 音のオン・オフ（見る人ごとの好みなので、セーブとは別に置く） */
 const MUTE_KEY = 'mori3_sound';
+const musicVolume = musicJson.volume;
 
 /** 同じ音が続けて鳴りすぎないように、音ごとに最後に鳴らした時刻を覚えておく */
 export class SoundGate {
@@ -41,12 +43,27 @@ export class SoundGate {
 export class Sound {
   private ctx: AudioContext | null = null;
   private out: GainNode | null = null;
+  private musicOut: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   private readonly gate = new SoundGate();
   muted: boolean;
 
   constructor() {
     this.muted = readMuted();
+  }
+
+  /** BGM をつなぐ先と、打楽器に使う雑音。音を出せる状態でなければ null */
+  get bus(): { ctx: AudioContext; out: AudioNode; noise: AudioBuffer } | null {
+    const ctx = this.ctx;
+    if (!ctx || !this.musicOut || !this.noise || ctx.state !== 'running') return null;
+    return { ctx, out: this.musicOut, noise: this.noise };
+  }
+
+  /** 画面が隠れたら音を止め、戻ったら鳴らし直す（iPad では戻ったあと触れたときに鳴る） */
+  onVisibility(hidden: boolean): void {
+    if (!this.ctx) return;
+    if (hidden) void this.ctx.suspend().catch(() => {});
+    else this.unlock();
   }
 
   /** 画面に触れたときに呼ぶ。音を出せる状態にする */
@@ -96,12 +113,16 @@ export class Sound {
     const out = ctx.createGain();
     out.gain.value = soundsJson.master;
     out.connect(comp);
+    const musicOut = ctx.createGain();
+    musicOut.gain.value = musicVolume;
+    musicOut.connect(comp);
     const len = Math.floor(ctx.sampleRate);
     const noise = ctx.createBuffer(1, len, ctx.sampleRate);
     const ch = noise.getChannelData(0);
     for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
     this.ctx = ctx;
     this.out = out;
+    this.musicOut = musicOut;
     this.noise = noise;
   }
 
@@ -150,3 +171,16 @@ function readMuted(): boolean {
 }
 
 export const sound = new Sound();
+
+/** 「音」のボタン：押すと効果音と BGM をまとめてオン・オフする */
+export function bindSoundButton(btn: HTMLButtonElement): void {
+  const show = () => {
+    btn.textContent = sound.muted ? '🔇' : '🔊';
+    btn.setAttribute('aria-pressed', String(!sound.muted));
+  };
+  btn.onclick = () => {
+    sound.setMuted(!sound.muted);
+    show();
+  };
+  show();
+}
