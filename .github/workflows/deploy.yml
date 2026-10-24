@@ -48,18 +48,24 @@ jobs:
         working-directory: mori
         run: npm test
 
-      # 作り直し版は、今の版と入れ替えるまで /mori/next/ で試せるようにする
       - name: Build (mori)
         working-directory: mori
-        run: npm run build -- --base /family-game/mori/next/
+        run: npm run build
 
-      # サイトの形: /index.html, /mori/（今の版）, /mori/next/（作り直し版）, /jeanne/（jeanne/dist の中身）
+      # サイトの形: /index.html, /mori/（mori/dist の中身）, /jeanne/（jeanne/dist の中身）
+      # /mori/next/ は作り直し版を試していたころの場所。ホーム画面に追加したリンクのために /mori/ へ移す
       - name: Assemble site
         run: |
           mkdir -p _site/jeanne _site/mori/next
           cp index.html _site/
-          cp mori/legacy/index.html mori/public/apple-touch-icon.png _site/mori/
-          cp -R mori/dist/. _site/mori/next/
+          cp -R mori/dist/. _site/mori/
+          cat > _site/mori/next/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <meta http-equiv="refresh" content="0; url=../">
+          <script>location.replace('../');</script>
+          <a href="../">もりの まもりびと へ</a>
+          EOF
           cp -R jeanne/dist/. _site/jeanne/
 
       - uses: actions/configure-pages@v6

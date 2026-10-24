@@ -7,7 +7,7 @@
 ```
 index.html                   ゲーム選択ページ
 .github/workflows/deploy.yml GitHub Pages への公開
-mori/                        もりのまもりびと（単一 HTML）
+mori/                        もりのまもりびと（Vite + TypeScript + Phaser 3）
 jeanne/                      ジャンヌの騎士（Vite + TypeScript + Phaser 3）
 ```
 

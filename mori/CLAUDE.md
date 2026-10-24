@@ -166,7 +166,7 @@ Oct 19, 2026 · 下書き
 - アプリを切り替えたら自動で一時停止し、戻ったら音を鳴らし直す（今の版の iPad 対応を引き継ぐ）
 - ゲームの計算は Phaser から切り離して `systems/World.ts` にまとめ、ヘッドレスで自動プレイできるようにする（ジャンヌと同じ方式）
 - 公開はリポジトリ共通の GitHub Actions（`.github/workflows/deploy.yml`）で行う。`vite.config.ts` の `base` は `'/family-game/mori/'`。`dist/` はコミットしない
-- 作り直し版に全ステージがそろうまで（マイルストーン7まで）、公開サイトの `/mori/` には今の版（`legacy/index.html`）を置き続け、作り直し版は `/mori/next/` で試す。ステージが足りないうちに入れ替えると、今の版で遊べていたステージ2〜8とむげんモードが遊べなくなるため。切り替えは deploy.yml の配置手順で行う
+- 作り直し版に全ステージがそろうまで（マイルストーン7まで）、公開サイトの `/mori/` には今の版（`legacy/index.html`）を置き、作り直し版は `/mori/next/` で試した。マイルストーン7の実機確認のあと、ユーザーの OK を取って `/mori/` を作り直し版に切り替えた（2026-10-24）。今の版は公開から外し、`/mori/next/` は `/mori/` へ移るだけのページにした（ホーム画面に追加したリンクのため）
 - 性能目標：敵100体＋とう20基で60fps。対象機は iPad Air 第4世代
 
 ファイル構成
@@ -176,7 +176,7 @@ mori/
   CLAUDE.md                本書
   package.json, vite.config.ts, tsconfig.json, index.html
   public/apple-touch-icon.png
-  legacy/index.html        今の版（作り直し前）。参考用、切り替えまでは公開もこれ
+  legacy/index.html        今の版（作り直し前）。参考用。公開はしない
   src/
     main.ts                Phaser の設定とシーン登録
     scenes/                Boot, Menu（タイトル・まもりびとの家・ステージ選び。画面は ui/Menus の HTML）, Battle（結果の画面を含む）
@@ -237,4 +237,4 @@ mori/
 - [x] 新しいとう2種と分かれ道の中身（案のとおり。数値は `docs/decisions.md` のマイルストーン4）
 - [x] 新しい敵4種の中身（案のとおり。数値は `docs/decisions.md` のマイルストーン4）
 - [x] 1ステージのウェーブ数（ステージ1から順に6〜10回。`docs/decisions.md` のマイルストーン7）
-- [ ] 切り替えのあと、今の版をゲーム選択ページに「むかしの もり」として残すか
+- [x] 切り替えのあと、今の版を残すか（残さない。公開から外し、ファイルは参考用に `legacy/` に置く）
