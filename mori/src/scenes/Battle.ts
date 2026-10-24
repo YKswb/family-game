@@ -10,6 +10,7 @@ import { Hud } from '../ui/Hud';
 import { Dialog } from '../ui/Dialog';
 import { Joystick } from '../ui/Joystick';
 import { Overlay } from '../ui/Overlay';
+import { sound, type SoundName } from '../ui/Sound';
 import { Effects } from '../views/Effects';
 import { drawEnemyHp, enemyLift } from '../views/EnemyView';
 import { FRIEND_LIFT } from '../systems/Companions';
@@ -184,6 +185,11 @@ export class BattleScene extends Phaser.Scene {
     this.overlay.callBtn.onclick = () => this.world.callNow();
     this.overlay.pauseBtn.onclick = () => this.pause();
     this.overlay.friendBtn.onclick = () => this.world.toggleCompanionMode();
+    this.overlay.soundBtn.onclick = () => {
+      sound.setMuted(!sound.muted);
+      this.updateSoundButton();
+    };
+    this.updateSoundButton();
 
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as Record<string, Phaser.Input.Keyboard.Key>;
     // パソコンでは C キーで仲間への命令を切り替える
@@ -198,6 +204,7 @@ export class BattleScene extends Phaser.Scene {
       this.game.events.off(Phaser.Core.Events.HIDDEN, this.onHidden, this);
       for (const p of this.popups) p.text.destroy();
       this.dialog.hide();
+      this.overlay.soundBtn.classList.add('hide');
     });
 
     const p = this.world.player;
@@ -224,11 +231,13 @@ export class BattleScene extends Phaser.Scene {
     if (w.outcome !== 'playing' && !this.resultShown) {
       this.resultShown = true;
       this.joystick.release();
+      sound.play(w.outcome === 'won' ? 'win' : 'lose');
       // クリアしたら、物語の会話のあとで結果を出す
       const clear = w.outcome === 'won' ? this.story?.clear : undefined;
       this.time.delayedCall(900, () => (clear ? this.talk(clear, () => this.showResult()) : this.showResult()));
     }
     this.overlay.pauseBtn.classList.toggle('hide', w.outcome !== 'playing' || this.overlay.visible || this.dialog.visible);
+    this.overlay.soundBtn.classList.toggle('hide', w.outcome !== 'playing' || this.overlay.visible);
     this.overlay.callBtn.classList.toggle('hide', !(running && w.phase === 'prep'));
     this.updateFriendButton(running);
     const fxDt = running ? dt : 0;
@@ -319,6 +328,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 会話を出す（出ている間は戦場が止まる）。指が画面に残っていたら離した扱いにする */
+  private updateSoundButton(): void {
+    const b = this.overlay.soundBtn;
+    b.textContent = sound.muted ? '🔇' : '🔊';
+    b.setAttribute('aria-pressed', String(!sound.muted));
+  }
+
   private talk(lines: StoryLine[], onDone: () => void = () => {}): void {
     this.joystick.release();
     this.dialog.show(lines, onDone);
@@ -413,6 +428,7 @@ export class BattleScene extends Phaser.Scene {
       if (joined && joins) {
         const c = GAME_DATA.companions.kinds[joins];
         lines.push(fmt(TEXT.friendJoined, { icon: c.icon, name: c.name }));
+        sound.play('joined');
       }
       this.overlay.showResult({
         title: last ? TEXT.allClear : TEXT.clear,
@@ -727,6 +743,7 @@ export class BattleScene extends Phaser.Scene {
   private onEvent(e: WorldEvent): void {
     const w = this.world;
     const fx = this.fx;
+    this.playFor(e);
     switch (e.type) {
       case 'chop':
         fx.burst(e.tree.x, e.tree.y - 20, 0xc58a52, 6, 140, 4);
@@ -868,6 +885,67 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'xpBonus':
         this.popup(w.player.x, w.player.y - 80, fmt(TEXT.xpBonus, { n: e.n }), '#7fe08a');
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** 出来事に合わせた効果音（音の中身は data/sounds.json） */
+  private playFor(e: WorldEvent): void {
+    const simple: Partial<Record<WorldEvent['type'], SoundName>> = {
+      chop: 'chop',
+      fell: 'fell',
+      pickup: 'pickup',
+      built: 'build',
+      territory: 'land',
+      attack: 'swing',
+      hit: 'hit',
+      summon: 'summon',
+      explode: 'boom',
+      zap: 'zap',
+      mend: 'mend',
+      chill: 'chill',
+      freeze: 'freeze',
+      blocked: 'clink',
+      stolen: 'stolen',
+      escape: 'escape',
+      friendWarp: 'warp',
+      friendMode: 'friendMode',
+      healPulse: 'enemyHeal',
+      wallHit: 'wallHit',
+      wallBroken: 'wallBroken',
+      houseHit: 'houseHit',
+      waveClear: 'waveClear',
+      levelUp: 'levelUp',
+    };
+    const name = simple[e.type];
+    if (name) {
+      sound.play(name);
+      return;
+    }
+    switch (e.type) {
+      case 'pay':
+        // 払うほど少しずつ高くなる
+        sound.play('pay', 1 + Math.min(1, e.spot.paid / Math.max(1, e.spot.cost)) * 0.8);
+        break;
+      case 'death':
+        sound.play(e.enemy.stats.boss ? 'bossDown' : 'pop');
+        break;
+      case 'spawn':
+        if (e.enemy.kind === 'boss') sound.play('bossCame');
+        if (e.enemy.kind === 'maou') sound.play('maouCame');
+        break;
+      case 'shoot':
+        if (e.spot.kind === 'arrow') sound.play('shootArrow');
+        else if (e.spot.kind === 'cannon') sound.play('shootCannon');
+        else if (e.spot.kind === 'ice') sound.play('shootIce');
+        break;
+      case 'friendAttack':
+        sound.play(e.companion.kind === 'momo' ? 'friendMomo' : e.companion.kind === 'goro' ? 'friendGoro' : 'friendHosuke');
+        break;
+      case 'wave':
+        sound.play(e.last ? 'lastWave' : 'wave');
         break;
       default:
         break;

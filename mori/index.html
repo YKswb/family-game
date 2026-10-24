@@ -18,7 +18,9 @@
   }
   html, body { margin: 0; height: 100%; background: #3d7431; overflow: hidden; }
   body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; -webkit-tap-highlight-color: transparent;
-    font-family: var(--font); font-weight: 800; color: var(--ink); }
+    font-family: var(--font); font-weight: 800; color: var(--ink);
+    /* 文は言葉の区切りにすき間を入れて書くので、すき間で折り返す（言葉の途中で切らない） */
+    word-break: keep-all; overflow-wrap: anywhere; }
   #game { position: fixed; inset: 0; }
   #game canvas { display: block; }
   /* セーフエリアの大きさを読み取るためだけの見えない箱 */
@@ -28,6 +30,7 @@
   /* 画面に重ねるボタン */
   .hudbtn { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right));
     width: 54px; height: 54px; border-radius: 16px; border: none; background: rgba(0, 0, 0, .3); color: #fff; font-size: 24px; cursor: pointer; }
+  #sound { top: calc(72px + env(safe-area-inset-top)); }
   #callnow { position: fixed; right: calc(14px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom));
     font: inherit; font-size: 18px; padding: 13px 20px; border: none; border-radius: 18px;
     background: var(--btn); color: var(--btn-ink); box-shadow: 0 5px 0 var(--btn-d); cursor: pointer; }
@@ -85,7 +88,7 @@
   #menu .panel { width: 100%; max-width: 760px; margin: auto 0; background: var(--panel); border-radius: 30px; padding: 22px 20px 24px;
     box-shadow: 0 10px 0 rgba(0, 0, 0, .22); box-sizing: border-box; }
   #menu .logo { text-align: center; margin: auto 0; }
-  #menu .logo h1 { font-size: clamp(40px, 9vw, 76px); margin: 0 0 4px; color: #fff; letter-spacing: .06em;
+  #menu .logo h1 { font-size: clamp(26px, 8.5vw, 76px); white-space: nowrap; margin: 0 0 4px; color: #fff; letter-spacing: .06em;
     text-shadow: 0 4px 0 #2b2116, 0 0 2px #2b2116, 3px 3px 0 #2b2116, -3px 3px 0 #2b2116, 3px -1px 0 #2b2116, -3px -1px 0 #2b2116; }
   #menu .logo p { font-size: 20px; color: #fff; margin: 0 0 26px; text-shadow: 0 2px 0 #2b2116, 2px 0 0 #2b2116, -2px 0 0 #2b2116, 0 -2px 0 #2b2116; }
   #menu .logo .btns { gap: 14px; }
@@ -121,6 +124,7 @@
   <div id="safe"></div>
   <div id="game"></div>
   <button id="pause" class="hudbtn hide" aria-label="ひとやすみ">⏸</button>
+  <button id="sound" class="hudbtn hide" aria-label="音の オン・オフ">🔊</button>
   <button id="callnow" class="hide"></button>
   <button id="friendbtn" class="hide"></button>
   <div id="menu" class="hide"></div>

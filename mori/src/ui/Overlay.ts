@@ -35,6 +35,7 @@ export class Overlay {
   readonly pauseBtn = el('pause') as HTMLButtonElement;
   readonly callBtn = el('callnow') as HTMLButtonElement;
   readonly friendBtn = el('friendbtn') as HTMLButtonElement;
+  readonly soundBtn = el('sound') as HTMLButtonElement;
 
   get visible(): boolean {
     return !this.ov.classList.contains('hide');
@@ -49,7 +50,7 @@ export class Overlay {
     const opts = options
       .map(
         (o, i) =>
-          `<button class="opt" data-i="${i}"><b>${escape(o.icon)}</b><span><span class="name">${escape(o.name)}</span><span class="desc">${escape(o.desc)}</span></span></button>`,
+          `<button class="opt" data-sfx="pick" data-i="${i}"><b>${escape(o.icon)}</b><span><span class="name">${escape(o.name)}</span><span class="desc">${escape(o.desc)}</span></span></button>`,
       )
       .join('');
     this.open(`<div class="title">${escape(title)}</div>${lead ? `<p class="lead">${escape(lead)}</p>` : ''}<div class="opts">${opts}</div>`);

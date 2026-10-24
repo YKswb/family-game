@@ -1,0 +1,209 @@
+{
+  "_": "効果音。tones は同時に鳴らす音の並び。f は高さ（Hz）、d は長さ（秒）、type は音色（sine / triangle / square / sawtooth / noise）、v は大きさ、f2 は終わりの高さ、at は鳴り始めの遅れ（秒）。gap は同じ音を続けて鳴らせる最短の間（ミリ秒）、vary は高さの揺れ（0.05 で ±5%）",
+  "master": 0.9,
+  "sounds": {
+    "tap": { "tones": [{ "f": 660, "d": 0.05, "type": "sine", "v": 0.06, "f2": 880 }], "gap": 40 },
+    "pick": {
+      "tones": [
+        { "f": 523, "d": 0.08, "type": "triangle", "v": 0.07 },
+        { "f": 784, "d": 0.12, "type": "triangle", "v": 0.07, "at": 0.06 }
+      ]
+    },
+    "buy": {
+      "tones": [
+        { "f": 988, "d": 0.07, "type": "square", "v": 0.035 },
+        { "f": 1319, "d": 0.18, "type": "square", "v": 0.035, "at": 0.07 }
+      ]
+    },
+    "talk": { "tones": [{ "f": 740, "d": 0.045, "type": "triangle", "v": 0.05, "f2": 900 }], "gap": 80 },
+    "chop": { "tones": [{ "f": 170, "d": 0.08, "type": "square", "v": 0.04, "f2": 95 }], "gap": 70, "vary": 0.08 },
+    "fell": {
+      "tones": [
+        { "f": 180, "d": 0.2, "type": "triangle", "v": 0.07, "f2": 90 },
+        { "f": 700, "d": 0.3, "type": "noise", "v": 0.05, "f2": 200, "at": 0.1 }
+      ]
+    },
+    "pickup": { "tones": [{ "f": 880, "d": 0.05, "type": "sine", "v": 0.04, "f2": 1200 }], "gap": 50, "vary": 0.05 },
+    "pay": { "tones": [{ "f": 600, "d": 0.045, "type": "sine", "v": 0.035 }], "gap": 45 },
+    "build": {
+      "tones": [
+        { "f": 523, "d": 0.1, "type": "square", "v": 0.035 },
+        { "f": 659, "d": 0.1, "type": "square", "v": 0.035, "at": 0.08 },
+        { "f": 784, "d": 0.22, "type": "square", "v": 0.035, "at": 0.16 }
+      ]
+    },
+    "land": {
+      "tones": [
+        { "f": 392, "d": 0.15, "type": "triangle", "v": 0.06 },
+        { "f": 523, "d": 0.15, "type": "triangle", "v": 0.06, "at": 0.1 },
+        { "f": 659, "d": 0.15, "type": "triangle", "v": 0.06, "at": 0.2 },
+        { "f": 784, "d": 0.35, "type": "triangle", "v": 0.06, "at": 0.3 }
+      ]
+    },
+    "swing": { "tones": [{ "f": 1800, "d": 0.08, "type": "noise", "v": 0.035, "f2": 700 }], "gap": 120 },
+    "hit": { "tones": [{ "f": 260, "d": 0.07, "type": "square", "v": 0.04, "f2": 150 }], "gap": 55, "vary": 0.08 },
+    "pop": {
+      "tones": [
+        { "f": 520, "d": 0.1, "type": "triangle", "v": 0.05, "f2": 260 },
+        { "f": 1500, "d": 0.12, "type": "noise", "v": 0.04 }
+      ],
+      "gap": 45,
+      "vary": 0.1
+    },
+    "bossCame": {
+      "tones": [
+        { "f": 110, "d": 0.6, "type": "sawtooth", "v": 0.06, "f2": 70 },
+        { "f": 98, "d": 0.6, "type": "sawtooth", "v": 0.05, "f2": 60, "at": 0.35 }
+      ]
+    },
+    "maouCame": {
+      "tones": [
+        { "f": 82, "d": 0.9, "type": "sawtooth", "v": 0.07, "f2": 50 },
+        { "f": 330, "d": 0.12, "type": "square", "v": 0.04, "f2": 300, "at": 0.5 },
+        { "f": 294, "d": 0.12, "type": "square", "v": 0.04, "f2": 270, "at": 0.65 },
+        { "f": 262, "d": 0.22, "type": "square", "v": 0.04, "f2": 230, "at": 0.8 }
+      ]
+    },
+    "bossDown": {
+      "tones": [
+        { "f": 400, "d": 0.6, "type": "noise", "v": 0.1, "f2": 100 },
+        { "f": 392, "d": 0.15, "type": "square", "v": 0.04, "at": 0.3 },
+        { "f": 523, "d": 0.15, "type": "square", "v": 0.04, "at": 0.45 },
+        { "f": 659, "d": 0.15, "type": "square", "v": 0.04, "at": 0.6 },
+        { "f": 784, "d": 0.4, "type": "square", "v": 0.04, "at": 0.75 }
+      ]
+    },
+    "summon": { "tones": [{ "f": 300, "d": 0.3, "type": "sine", "v": 0.05, "f2": 900 }], "gap": 150 },
+    "shootArrow": { "tones": [{ "f": 900, "d": 0.05, "type": "triangle", "v": 0.025, "f2": 500 }], "gap": 70, "vary": 0.06 },
+    "shootCannon": {
+      "tones": [
+        { "f": 300, "d": 0.18, "type": "noise", "v": 0.06, "f2": 120 },
+        { "f": 90, "d": 0.12, "type": "sine", "v": 0.06, "f2": 50 }
+      ],
+      "gap": 110
+    },
+    "shootIce": { "tones": [{ "f": 1300, "d": 0.06, "type": "triangle", "v": 0.025, "f2": 700 }], "gap": 80 },
+    "boom": {
+      "tones": [
+        { "f": 500, "d": 0.4, "type": "noise", "v": 0.09, "f2": 80 },
+        { "f": 70, "d": 0.3, "type": "sine", "v": 0.07, "f2": 40 }
+      ],
+      "gap": 90
+    },
+    "zap": {
+      "tones": [
+        { "f": 1200, "d": 0.12, "type": "sawtooth", "v": 0.025, "f2": 300 },
+        { "f": 3000, "d": 0.1, "type": "noise", "v": 0.03 }
+      ],
+      "gap": 90
+    },
+    "mend": {
+      "tones": [
+        { "f": 660, "d": 0.1, "type": "sine", "v": 0.035 },
+        { "f": 880, "d": 0.14, "type": "sine", "v": 0.035, "at": 0.07 }
+      ],
+      "gap": 400
+    },
+    "chill": { "tones": [{ "f": 1500, "d": 0.25, "type": "sine", "v": 0.025, "f2": 900 }], "gap": 250 },
+    "freeze": {
+      "tones": [
+        { "f": 1800, "d": 0.08, "type": "triangle", "v": 0.035 },
+        { "f": 2400, "d": 0.15, "type": "triangle", "v": 0.03, "at": 0.05 }
+      ],
+      "gap": 150
+    },
+    "clink": { "tones": [{ "f": 1800, "d": 0.06, "type": "square", "v": 0.02, "f2": 1500 }], "gap": 120 },
+    "stolen": {
+      "tones": [
+        { "f": 400, "d": 0.15, "type": "triangle", "v": 0.05, "f2": 250 },
+        { "f": 300, "d": 0.2, "type": "triangle", "v": 0.05, "f2": 180, "at": 0.12 }
+      ],
+      "gap": 300
+    },
+    "escape": {
+      "tones": [
+        { "f": 500, "d": 0.12, "type": "square", "v": 0.035 },
+        { "f": 400, "d": 0.12, "type": "square", "v": 0.035, "at": 0.1 },
+        { "f": 300, "d": 0.25, "type": "square", "v": 0.035, "at": 0.2 }
+      ]
+    },
+    "friendMomo": { "tones": [{ "f": 700, "d": 0.05, "type": "triangle", "v": 0.03, "f2": 1000 }], "gap": 90, "vary": 0.06 },
+    "friendGoro": {
+      "tones": [
+        { "f": 110, "d": 0.15, "type": "sine", "v": 0.07, "f2": 60 },
+        { "f": 300, "d": 0.12, "type": "noise", "v": 0.04 }
+      ],
+      "gap": 150
+    },
+    "friendHosuke": { "tones": [{ "f": 900, "d": 0.12, "type": "sine", "v": 0.03, "f2": 1400 }], "gap": 110 },
+    "warp": { "tones": [{ "f": 600, "d": 0.2, "type": "sine", "v": 0.04, "f2": 1800 }] },
+    "friendMode": {
+      "tones": [
+        { "f": 587, "d": 0.08, "type": "triangle", "v": 0.05 },
+        { "f": 880, "d": 0.12, "type": "triangle", "v": 0.05, "at": 0.07 }
+      ]
+    },
+    "enemyHeal": { "tones": [{ "f": 440, "d": 0.2, "type": "sine", "v": 0.025, "f2": 660 }], "gap": 500 },
+    "wallHit": {
+      "tones": [
+        { "f": 800, "d": 0.08, "type": "noise", "v": 0.035 },
+        { "f": 180, "d": 0.06, "type": "square", "v": 0.025, "f2": 120 }
+      ],
+      "gap": 140,
+      "vary": 0.1
+    },
+    "wallBroken": {
+      "tones": [
+        { "f": 500, "d": 0.35, "type": "noise", "v": 0.08, "f2": 150 },
+        { "f": 140, "d": 0.25, "type": "sawtooth", "v": 0.04, "f2": 60 }
+      ]
+    },
+    "houseHit": { "tones": [{ "f": 120, "d": 0.15, "type": "sawtooth", "v": 0.055, "f2": 70 }], "gap": 160 },
+    "wave": { "tones": [{ "f": 330, "d": 0.3, "type": "sawtooth", "v": 0.04, "f2": 440 }] },
+    "lastWave": {
+      "tones": [
+        { "f": 330, "d": 0.2, "type": "sawtooth", "v": 0.04 },
+        { "f": 440, "d": 0.4, "type": "sawtooth", "v": 0.04, "at": 0.18 }
+      ]
+    },
+    "waveClear": {
+      "tones": [
+        { "f": 523, "d": 0.12, "type": "square", "v": 0.035 },
+        { "f": 659, "d": 0.12, "type": "square", "v": 0.035, "at": 0.08 },
+        { "f": 784, "d": 0.25, "type": "square", "v": 0.035, "at": 0.16 }
+      ]
+    },
+    "levelUp": {
+      "tones": [
+        { "f": 523, "d": 0.12, "type": "triangle", "v": 0.06 },
+        { "f": 659, "d": 0.12, "type": "triangle", "v": 0.06, "at": 0.07 },
+        { "f": 784, "d": 0.12, "type": "triangle", "v": 0.06, "at": 0.14 },
+        { "f": 1047, "d": 0.3, "type": "triangle", "v": 0.06, "at": 0.21 }
+      ]
+    },
+    "win": {
+      "tones": [
+        { "f": 523, "d": 0.18, "type": "square", "v": 0.04 },
+        { "f": 659, "d": 0.18, "type": "square", "v": 0.04, "at": 0.12 },
+        { "f": 784, "d": 0.18, "type": "square", "v": 0.04, "at": 0.24 },
+        { "f": 1047, "d": 0.5, "type": "square", "v": 0.04, "at": 0.36 },
+        { "f": 523, "d": 0.5, "type": "triangle", "v": 0.05, "at": 0.36 }
+      ]
+    },
+    "lose": {
+      "tones": [
+        { "f": 392, "d": 0.3, "type": "triangle", "v": 0.06 },
+        { "f": 330, "d": 0.3, "type": "triangle", "v": 0.06, "at": 0.22 },
+        { "f": 262, "d": 0.6, "type": "triangle", "v": 0.06, "at": 0.44 }
+      ]
+    },
+    "joined": {
+      "tones": [
+        { "f": 784, "d": 0.12, "type": "triangle", "v": 0.06 },
+        { "f": 988, "d": 0.12, "type": "triangle", "v": 0.06, "at": 0.09 },
+        { "f": 1175, "d": 0.12, "type": "triangle", "v": 0.06, "at": 0.18 },
+        { "f": 1568, "d": 0.35, "type": "triangle", "v": 0.06, "at": 0.27 }
+      ]
+    }
+  }
+}

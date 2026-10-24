@@ -1,5 +1,6 @@
 import type { Speaker, SpeakerInfo, StoryLine } from '../data/gameData';
 import { escape } from './Overlay';
+import { sound } from './Sound';
 
 /**
  * 会話の箱（画面の下）。1行ずつ出し、画面のどこかをタップすると次へ進む。
@@ -52,6 +53,7 @@ export class Dialog {
       <div class="more">${last ? '✔' : '▶'}</div>
     </div>`;
     this.readyAt = performance.now() + 250;
+    sound.play('talk');
   }
 
   private next(): void {

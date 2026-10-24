@@ -61,9 +61,9 @@ Oct 19, 2026 · 下書き
 | 2 | 秋の森 | 秋 | たいほうのとう、敵が2方向から来る |
 | 3 | 雪の森 | 雪 | こおりのとう、空を飛ぶ敵、最初のボス |
 | 4 | 夕焼けの森 | 夕方 | よろいの敵、とうの分かれ道（Lv3） |
-| 5 | 砂の砂漠 | 砂漠 | 新しいとう、分裂する敵、ボス |
-| 6 | 霧の沼地 | 沼 | 視界がせまい霧、新しい敵 |
-| 7 | 炎の火山 | 火山 | 新しいとう、ボス |
+| 5 | 砂の さばく | 砂漠 | 新しいとう、分裂する敵、ボス |
+| 6 | きりの ぬま地 | 沼 | 視界がせまい霧、新しい敵 |
+| 7 | ほのおの 火山 | 火山 | 新しいとう、ボス |
 | 8 | おゆきちの城 | 夜 | おゆきち戦、全要素の総合戦 |
 
 1ステージ10分の目安：最初の準備1分 ＋ ウェーブ8〜10回（1回40〜60秒、間の準備20秒前後）。ステージ1〜4までクリアすると、むげんモードが遊べるようになる。
@@ -183,7 +183,7 @@ mori/
     systems/               World, Combat, Waves, Build, Level, Upgrades, Save
     entities/              Player, Companion（仲間）, Enemy, Tree, House（とうとかべは systems/Build の Spot）
     views/                 各エンティティの描画と演出
-    ui/                    Hud, Joystick, Dialog, Choice(3択), Button
+    ui/                    Hud, Joystick, Dialog, Overlay（3択・結果）, Menus, Sound（効果音）
     data/
       towers.json          とうの数値と分かれ道
       enemies.json         敵の数値と特徴
@@ -192,6 +192,7 @@ mori/
       companions.json      仲間3人の強さと、ついてくる・守るときの距離
       difficulty.json      難易度の倍率
       text.json            画面の文言
+      sounds.json          効果音（Web Audio で合成する短い音）
       stages/stage1.json … stage8.json, endless.json, practice.json（テスト用）
       story/stage1.json … stage8.json, speakers.json（話し手）
   tests/                   vitest（ユニットテストと自動プレイ）

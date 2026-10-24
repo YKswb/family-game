@@ -1,6 +1,6 @@
 {
   "id": "stage5",
-  "name": "砂の砂漠",
+  "name": "砂の さばく",
   "tip": "ピンクの スライムは 2ひきに わかれる。かみなりの とうが 来たよ！",
   "towers": ["arrow", "cannon", "ice", "lightning"],
   "reward": 36,

@@ -1,7 +1,7 @@
 {
   "id": "stage6",
-  "name": "霧の沼地",
-  "tip": "霧で 遠くが 見えない。たて持ちと もぐらに 気をつけて",
+  "name": "きりの ぬま地",
+  "tip": "きりで 遠くが 見えない。たて持ちと もぐらに 気をつけて",
   "towers": ["arrow", "cannon", "ice", "lightning"],
   "reward": 42,
   "theme": {

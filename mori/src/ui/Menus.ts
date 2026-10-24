@@ -77,7 +77,7 @@ export class Menus {
             const btn =
               cost === null
                 ? `<button class="mini" disabled>${escape(TEXT.maxed)}</button>`
-                : `<button class="mini" data-buy="${escape(u.id)}" ${s.love < cost ? 'disabled' : ''}>${escape(fmt(TEXT.buy, { n: cost }))}</button>`;
+                : `<button class="mini" data-sfx="buy" data-buy="${escape(u.id)}" ${s.love < cost ? 'disabled' : ''}>${escape(fmt(TEXT.buy, { n: cost }))}</button>`;
             return `<div class="row"><b>${escape(u.icon)}</b><span class="txt"><span class="name">${escape(u.name)}</span><span class="desc">${escape(u.desc)}</span><span class="lv">${dots}</span></span>${btn}</div>`;
           })
           .join('');
@@ -90,7 +90,7 @@ export class Menus {
     const unlockRows = can
       .map(
         (u) =>
-          `<div class="row"><b>${escape(kinds[u.tower].icon)}</b><span class="txt"><span class="name">${escape(kinds[u.tower].name)}</span><span class="desc">${escape(TEXT.unlockDesc)}</span></span><button class="mini" data-unlock="${u.tower}" ${s.love < u.cost ? 'disabled' : ''}>${escape(fmt(TEXT.buy, { n: u.cost }))}</button></div>`,
+          `<div class="row"><b>${escape(kinds[u.tower].icon)}</b><span class="txt"><span class="name">${escape(kinds[u.tower].name)}</span><span class="desc">${escape(TEXT.unlockDesc)}</span></span><button class="mini" data-sfx="buy" data-unlock="${u.tower}" ${s.love < u.cost ? 'disabled' : ''}>${escape(fmt(TEXT.buy, { n: u.cost }))}</button></div>`,
       )
       .join('');
     const unlockedList = s.unlocked.map((k) => `${kinds[k].icon}${kinds[k].short}`).join('　');

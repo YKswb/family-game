@@ -1,7 +1,7 @@
 {
   "id": "stage4",
   "name": "夕焼けの森",
-  "tip": "よろいの 騎士は 大ほうに よわいよ",
+  "tip": "よろいの きしは 大ほうに よわいよ",
   "towers": ["arrow", "cannon", "ice"],
   "reward": 30,
   "theme": {

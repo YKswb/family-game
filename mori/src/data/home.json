@@ -14,7 +14,7 @@
   ],
   "upgrades": [
     { "id": "speed", "group": "keeper", "icon": "👟", "name": "はやあし", "desc": "歩く はやさ +6%", "costs": [10, 20, 35], "stat": "speed", "add": 0.06 },
-    { "id": "attack", "group": "keeper", "icon": "⚔️", "name": "つよい おの", "desc": "斧の こうげき +0.5", "costs": [15, 30, 50], "stat": "attack", "add": 0.5 },
+    { "id": "attack", "group": "keeper", "icon": "⚔️", "name": "つよい おの", "desc": "おのの こうげき +0.5", "costs": [15, 30, 50], "stat": "attack", "add": 0.5 },
     { "id": "carry", "group": "keeper", "icon": "🎒", "name": "大きな せおいかご", "desc": "持てる 木材 +5", "costs": [10, 20, 35], "stat": "capacity", "add": 5 },
     { "id": "chop", "group": "keeper", "icon": "🪓", "name": "木こりの わざ", "desc": "木を切る はやさ +10%", "costs": [10, 20, 35], "stat": "chop", "mul": 0.9 },
     { "id": "towerPower", "group": "tower", "icon": "🏹", "name": "とうの 力", "desc": "とうの こうげき +10%", "costs": [15, 30, 50], "stat": "towerDamage", "add": 0.1 },
