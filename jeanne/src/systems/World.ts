@@ -57,6 +57,8 @@ export interface WorldConfig {
   gates?: Gate[];
   /** 敵の部隊が、人数が減ると大将の方へ下がる */
   enemyRetreat?: boolean;
+  /** いまの目的（HUD に出す。イベントで変わる） */
+  objective?: string;
   /** 敵の大将（護衛が全滅するまで無敵） */
   general?: StageGeneral;
   /** ステージのイベント。あるときはイベントの「勝利」でだけクリアになる */
@@ -97,7 +99,8 @@ export type WorldEvent =
   | { type: 'jeanneBack'; x: number; y: number }
   | { type: 'rally' }
   | { type: 'gateOpened'; id: string }
-  | { type: 'banner'; text: string };
+  | { type: 'banner'; text: string }
+  | { type: 'objective'; text: string };
 
 export interface Arrow {
   x: number;
@@ -149,6 +152,8 @@ export class World {
   private readonly reviveSeconds: number;
   /** 敵の部隊が、人数が減ると大将の方へ下がる */
   readonly enemyRetreat: boolean;
+  /** いまの目的（HUD の最後の行。空なら大将の護衛の数を出す） */
+  objective: string;
   /** 味方が奮い立っている残りの秒数と、攻撃の上がり方 */
   rallyTime = 0;
   rallyBonus = 0;
@@ -184,6 +189,7 @@ export class World {
     this.obstacles = cfg.obstacles ?? [];
     this.terrain = new Terrain(cfg.blockers, cfg.passages, cfg.gates);
     this.enemyRetreat = !!cfg.enemyRetreat;
+    this.objective = cfg.objective ?? '';
     this.script = cfg.events ? new EventRunner(cfg.events) : null;
     this.rng = new Random(cfg.seed ?? 1);
     this.grid = new SpatialGrid<Unit>(cfg.width, cfg.height, this.data.ai.gridCell);
@@ -861,6 +867,12 @@ export class World {
     this.rallyTime = seconds;
     this.rallyBonus = bonus;
     this.events.push({ type: 'rally' });
+  }
+
+  /** 目的を変える（空にすると、大将の護衛の数の表示にもどる） */
+  setObjective(text: string): void {
+    this.objective = text;
+    this.events.push({ type: 'objective', text });
   }
 
   /** 門を開く */

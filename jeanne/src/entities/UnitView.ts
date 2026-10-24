@@ -55,14 +55,11 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
   const bob = u.moving ? Math.abs(Math.sin(u.bob)) * 2 : 0;
   const r = u.radius;
 
+  if (guardRing) drawGuardRing(g, u);
   g.save();
   g.translateCanvas(u.x, u.y);
   g.fillStyle(COLOR.shadow, 0.2);
   g.fillEllipse(0, 2, r * 2.2, r * 0.9);
-  if (guardRing) {
-    g.lineStyle(3, COLOR.gold, 0.95);
-    g.strokeEllipse(0, 2, r * 3, r * 1.3);
-  }
   g.scaleCanvas(u.face, 1);
 
   if (mounted) {
@@ -156,22 +153,37 @@ export function drawUnit(g: Phaser.GameObjects.Graphics, u: Unit, guarded = fals
     }
   }
   g.restore();
+  drawUnitTop(g, u, guarded);
+}
 
+/** 大将を守る護衛の兵士の足元の、金色の輪 */
+export function drawGuardRing(g: Phaser.GameObjects.Graphics, u: Unit): void {
+  const r = u.radius;
+  g.lineStyle(3, COLOR.gold, 0.95);
+  g.strokeEllipse(u.x, u.y + 2, r * 3, r * 1.3);
+}
+
+/**
+ * 兵士の上に重ねるもの：大将が守られているときの守りの輪（guarded）と、
+ * ジャン・ジャンヌ・大将の HP バー（減っているときだけ）
+ */
+export function drawUnitTop(g: Phaser.GameObjects.Graphics, u: Unit, guarded = false): void {
+  const isGen = u.kind === 'general';
+  const isJeanne = u.kind === 'jeanne';
   if (guarded) {
     g.lineStyle(3, 0xffe066, 0.8);
     g.strokeCircle(u.x, u.y - 22, 34);
     g.fillStyle(0xffe066, 0.12);
     g.fillCircle(u.x, u.y - 22, 34);
   }
-
-  if ((isHero || isGen || isJeanne) && u.hp < u.maxHp) {
+  if ((u.kind === 'hero' || isGen || isJeanne) && u.hp < u.maxHp) {
     const w = isGen ? 60 : 44;
     const y = u.y - (isGen ? 78 : isJeanne ? 66 : 62);
     const low = u.hp / u.maxHp <= 0.3;
     g.fillStyle(COLOR.hpBack, 0.45);
-    g.fillRoundedRect(u.x - w / 2, y, w, 6, 3);
+    g.fillRect(u.x - w / 2, y, w, 6);
     g.fillStyle(isGen || low ? COLOR.hpLow : isJeanne ? COLOR.hpJeanne : COLOR.hpHero, 1);
-    g.fillRoundedRect(u.x - w / 2, y, Math.max(3, (w * u.hp) / u.maxHp), 6, 3);
+    g.fillRect(u.x - w / 2, y, Math.max(3, (w * u.hp) / u.maxHp), 6);
   }
 }
 

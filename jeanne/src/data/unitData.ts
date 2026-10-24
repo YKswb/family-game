@@ -108,6 +108,8 @@ export interface UnitData {
     jeanne: {
       /** ジャンのこれだけ後ろを付いて歩く */
       followBehind: number;
+      /** HP が少ないときは、ジャンのこれだけ後ろまで下がる */
+      retreatBehind: number;
       /** この距離以内に来た敵と戦う */
       engageRadius: number;
       /** 付いて歩く位置からこれ以上離れたら、戦いをやめて戻る */

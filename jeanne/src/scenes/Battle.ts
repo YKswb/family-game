@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SOLDIER_KINDS, UNIT_DATA, type SoldierKind } from '../data/unitData';
 import { STAGES } from '../data/stageData';
-import { drawArrow, drawFlag, drawGate, drawGoal, drawUnit } from '../entities/UnitView';
+import { drawArrow, drawFlag, drawGate, drawGoal, drawGuardRing, drawUnitTop } from '../entities/UnitView';
 import type { Unit } from '../entities/Unit';
 import { ARENA, arenaConfig, practiceConfig } from '../systems/Arena';
 import { Random } from '../systems/Random';
@@ -13,6 +13,7 @@ import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { fieldItems } from '../ui/FieldView';
 import { GroundTiles } from '../ui/GroundTiles';
+import { UnitSprites } from '../ui/UnitSprites';
 import { DPR, TEXT, VIEW_H, VIEW_W, WORLD_ZOOM, fmt, textStyle } from '../ui/Display';
 import { Hud, compositionText } from '../ui/Hud';
 import { Joystick } from '../ui/Joystick';
@@ -75,7 +76,12 @@ export class BattleScene extends Phaser.Scene {
   private enemyKind: SoldierKind = 'spear';
 
   private uiCam!: Phaser.Cameras.Scene2D.Camera;
+  /** 兵士の下に描くもの（門・目的地・護衛の金の輪） */
   private unitGfx!: Phaser.GameObjects.Graphics;
+  /** 兵士の絵 */
+  private sprites!: UnitSprites;
+  /** 兵士の上に描くもの（矢・旗・HP バー・大将の守りの輪） */
+  private topGfx!: Phaser.GameObjects.Graphics;
   private fxGfx!: Phaser.GameObjects.Graphics;
   private ground!: GroundTiles;
   private hud!: Hud;
@@ -137,10 +143,14 @@ export class BattleScene extends Phaser.Scene {
     this.uiCam = this.cameras.add(0, 0, VIEW_W * DPR, VIEW_H * DPR).setOrigin(0, 0).setZoom(DPR);
 
     this.drawGround();
+    // 重なり順：地面(-10) → 門・輪(0) → 兵士(1〜2、下にいるほど手前) → 矢・旗・HP(3) → 名札(4) → 効果(5)
     this.unitGfx = this.toWorld(this.add.graphics());
-    this.fxGfx = this.toWorld(this.add.graphics());
+    this.sprites = new UnitSprites(this, DPR * WORLD_ZOOM, 1, (img) => this.toWorld(img));
+    this.topGfx = this.toWorld(this.add.graphics().setDepth(3));
+    this.fxGfx = this.toWorld(this.add.graphics().setDepth(5));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.sprites.destroy());
 
-    this.hud = new Hud(this, !!this.world.jeanne, this.mode === 'stage' ? (STAGES[this.stageId].stage.objective ?? '') : '');
+    this.hud = new Hud(this, !!this.world.jeanne);
     this.toUi(...this.hud.objects);
     this.joystick = new Joystick(this);
     this.toUi(this.joystick.gfx);
@@ -248,14 +258,25 @@ export class BattleScene extends Phaser.Scene {
       if (u.x < x0 || u.x > x1 || u.y < y0 || u.y > y1) continue;
       alive.push(u);
     }
-    alive.sort((a, b) => a.y - b.y);
     const guarded = w.isGeneralGuarded();
-    for (const u of alive) drawUnit(g, u, u === w.general && guarded, guarded && !!u.squad && w.isGuardSquad(u.squad));
-    for (const a of w.arrows) drawArrow(g, a);
+    const top = this.topGfx;
+    top.clear();
+    this.sprites.begin();
+    for (const u of alive) {
+      if (guarded && u.squad && w.isGuardSquad(u.squad)) drawGuardRing(g, u);
+      this.sprites.draw(u);
+      drawUnitTop(top, u, u === w.general && guarded);
+    }
+    this.sprites.end();
+    for (const a of w.arrows) {
+      if (a.x < x0 || a.x > x1 || a.y < y0 || a.y > y1) continue;
+      drawArrow(top, a);
+    }
     for (const sq of w.squads) {
       if (sq.mode === 'neutral' && sq.aliveCount > 0) {
         const c = sq.center();
-        drawFlag(g, c.x, c.y - 26, w.time);
+        if (c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+        drawFlag(top, c.x, c.y - 26, w.time);
       }
     }
 
@@ -318,7 +339,7 @@ ${compositionText(sq)}`, sq.side === 'ally' ? '#9fe8ff' : '#ffc4bd');
   private labelFor(key: string): Phaser.GameObjects.Text {
     let label = this.labels.get(key);
     if (!label) {
-      label = this.toWorld(this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5, 1).setAlign('center'));
+      label = this.toWorld(this.add.text(0, 0, '', textStyle(18)).setOrigin(0.5, 1).setAlign('center').setDepth(4));
       this.labels.set(key, label);
     }
     return label;
@@ -418,6 +439,9 @@ ${compositionText(sq)}`, sq.side === 'ally' ? '#9fe8ff' : '#ffc4bd');
         break;
       case 'banner':
         this.showBanner(e.text, '#ffffff', 32);
+        break;
+      case 'objective':
+        if (e.text) this.showBanner(e.text, '#ffe066', 32);
         break;
       case 'reinforce': {
         this.showBanner(fmt(TEXT.reinforced, { n: e.count }), '#ffd84d');

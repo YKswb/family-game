@@ -19,5 +19,6 @@ export function stageConfig(stage: StageData, seed = 1): WorldConfig {
     general: stage.general,
     events: stage.events,
     enemyRetreat: !!stage.enemyRetreat,
+    objective: stage.objective,
   };
 }

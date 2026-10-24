@@ -50,6 +50,7 @@ export function conditionMet(w: World, c: EventCondition, firedAt: ReadonlyMap<s
 function runAction(w: World, a: EventAction): void {
   if (a.dialog) w.events.push({ type: 'dialog', key: a.dialog });
   if (a.banner) w.events.push({ type: 'banner', text: a.banner });
+  if (a.objective !== undefined) w.setObjective(a.objective);
   if (a.spawn) for (const s of a.spawn) w.addSquad({ ...s, dir: s.dir });
   if (a.openGate) w.openGate(a.openGate);
   if (a.march) {

@@ -31,12 +31,7 @@ export class Hud {
   /** ジャンヌが戦場をはなれているときに、バーの代わりに出す文字 */
   private readonly jeanneAway: Phaser.GameObjects.Text;
 
-  /** objective：大将のいないステージで、最後の行に出す目的 */
-  constructor(
-    scene: Phaser.Scene,
-    withJeanne: boolean,
-    private readonly objective = '',
-  ) {
+  constructor(scene: Phaser.Scene, withJeanne: boolean) {
     const dy = (this.dy = withJeanne ? JEANNE_ROW : 0);
     this.gfx = scene.add.graphics().setDepth(800);
     this.name = scene.add.text(30, 36, TEXT.heroName, textStyle(26, '#ffd04a')).setOrigin(0, 0.5).setDepth(801);
@@ -44,7 +39,11 @@ export class Hud {
     this.order = scene.add.text(30, 78 + dy, '', textStyle(24)).setOrigin(0, 0.5).setDepth(801);
     this.squads = scene.add.text(30, 116 + dy, '', textStyle(22)).setOrigin(0, 0.5).setDepth(801);
     this.counts = scene.add.text(30, 154 + dy, '', textStyle(20, '#e8e0cc')).setOrigin(0, 0.5).setDepth(801);
-    this.guards = scene.add.text(30, 190 + dy, '', textStyle(22, '#ffd84d')).setOrigin(0, 0.5).setDepth(801);
+    // 目的は長いことがあるので、枠の幅で折り返す（上をそろえ、行が増えたら枠を下へのばす）
+    this.guards = scene.add
+      .text(30, 176 + dy, '', { ...textStyle(22, '#ffd84d'), wordWrap: { width: 330, useAdvancedWrap: true } })
+      .setOrigin(0, 0)
+      .setDepth(801);
     this.jeanneAway = scene.add.text(252, 74, TEXT.jeanneAway, textStyle(20, '#ffe9f2')).setOrigin(0.5).setDepth(802).setVisible(false);
   }
 
@@ -57,10 +56,12 @@ export class Hud {
     const g = this.gfx;
     g.clear();
     g.fillStyle(0x000000, 0.38);
-    // 大将がいるステージでは残りの護衛の数を、いないステージでは目的を、1行足す
+    // いまの目的があれば目的を、なければ（大将がいるステージで）残りの護衛の数を、1行足す
     const hasGeneral = !!w.general;
-    const lastLine = hasGeneral || !!this.objective;
-    g.fillRoundedRect(14, 12, 360, (lastLine ? 200 : 166) + this.dy, 18);
+    const lastLine = hasGeneral || !!w.objective;
+    // 最後の行（目的・護衛の数）が折り返したぶん、枠をのばす
+    const extra = lastLine ? Math.max(0, this.guards.height - 30) : 0;
+    g.fillRoundedRect(14, 12, 360, (lastLine ? 200 : 166) + this.dy + extra, 18);
     // HPバー
     const bx = 150;
     const bw = 204;
@@ -101,11 +102,11 @@ export class Hud {
     const s = Math.floor(w.time);
     this.counts.setText(`${TEXT.enemyLabel} ${w.countAlive('enemy')}　${TEXT.time} ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
     this.guards.setVisible(lastLine);
-    if (hasGeneral) {
+    if (w.objective) {
+      this.guards.setText(w.objective);
+    } else if (hasGeneral) {
       const n = w.guardsLeft();
       this.guards.setText(n > 0 ? fmt(TEXT.guardsLeft, { n }) : TEXT.guardsGone);
-    } else if (this.objective) {
-      this.guards.setText(this.objective);
     }
   }
 }

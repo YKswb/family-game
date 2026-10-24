@@ -18,8 +18,8 @@
   "hard": {
     "name": "むずかしい",
     "note": "てきが おおくて つよい。なかまは ふっかつしない",
-    "enemyHp": 1.25,
-    "enemyCount": 1.25,
+    "enemyHp": 1.15,
+    "enemyCount": 1.15,
     "revive": false,
     "reviveSeconds": 10
   }

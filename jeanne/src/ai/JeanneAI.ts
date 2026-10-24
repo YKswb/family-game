@@ -25,11 +25,12 @@ export function updateJeanne(w: World, j: Jeanne, dt: number): void {
     j.hp = Math.min(j.maxHp, j.hp + (st.regenPerSecond ?? 0) * dt);
   }
 
-  // 付いて歩く位置：ジャンの進行方向の後ろ
-  const fx = h.x - w.headX * cfg.followBehind;
-  const fy = h.y - w.headY * cfg.followBehind;
-  const fromFollow = dist(j.x, j.y, fx, fy);
+  // 付いて歩く位置：ジャンの進行方向の後ろ。HP が少ないときは、戦いから離れてもっと後ろへ
   const low = j.hp < j.maxHp * cfg.lowHpRatio;
+  const behind = low ? cfg.retreatBehind : cfg.followBehind;
+  const fx = h.x - w.headX * behind;
+  const fy = h.y - w.headY * behind;
+  const fromFollow = dist(j.x, j.y, fx, fy);
   const canFight = !low && w.recallTime <= 0 && fromFollow <= cfg.leash;
 
   j.retargetIn -= dt;

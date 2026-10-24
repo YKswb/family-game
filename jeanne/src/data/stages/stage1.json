@@ -5,6 +5,7 @@
   "width": 3600,
   "height": 2400,
   "groundColor": "#6fb352",
+  "objective": "もくてき：村を おそう 野盗を おいはらえ",
   "terrain": {
     "rivers": [{ "x": 1700, "y": 0, "w": 110, "h": 2400 }],
     "walls": [],
@@ -47,20 +48,20 @@
     { "id": "riverSpear", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 1960, "y": 1900 },
     { "id": "campSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 2550, "y": 1300 },
 
-    { "id": "jikeidan", "side": "ally", "mode": "hold", "kind": "spear", "count": 8, "x": 300, "y": 1600, "dir": [1, 0], "route": [[300, 1600], [900, 1500], [1180, 1440]], "speed": 40, "leader": { "name": "自警団長" } },
-    { "id": "kikori", "side": "ally", "mode": "hold", "kind": "sword", "count": 8, "x": 500, "y": 600, "dir": [1, 0], "route": [[500, 600], [1000, 620], [1250, 660]], "speed": 40, "leader": { "name": "きこりの頭" } },
+    { "id": "jikeidan", "side": "ally", "mode": "hold", "kind": "spear", "count": 12, "x": 560, "y": 1820, "dir": [1, 0], "speed": 45, "leader": { "name": "自警団長" } },
+    { "id": "kikori", "side": "ally", "mode": "hold", "kind": "sword", "count": 12, "x": 330, "y": 1420, "dir": [0, -1], "speed": 45, "leader": { "name": "きこりの頭" } },
 
-    { "id": "raider3", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 950, "y": 1250, "dir": [-1, 0] },
-    { "id": "raider1", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 1120, "y": 1900, "dir": [-1, 0] },
-    { "id": "raider2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 1260, "y": 1430, "dir": [-1, 0] },
-    { "id": "patrolW", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 1300, "y": 420, "patrol": [[1300, 420], [1300, 900]] },
-    { "id": "bridgeSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2080, "y": 1080, "dir": [-1, 0] },
-    { "id": "bridgeSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 2120, "y": 1450, "dir": [-1, 0] },
-    { "id": "patrolE", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2650, "y": 1000, "patrol": [[2650, 1000], [2900, 1500], [2600, 1550]] },
-    { "id": "campSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 2650, "y": 700, "dir": [-1, 0] },
-    { "id": "guard1", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2950, "y": 480, "dir": [-1, 0] },
-    { "id": "guard2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 3170, "y": 640, "dir": [0, 1] },
-    { "id": "guard3", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 3380, "y": 460, "dir": [-1, 0] }
+    { "id": "raider3", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 950, "y": 1250, "dir": [-1, 0] },
+    { "id": "raider1", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 1120, "y": 1900, "dir": [-1, 0] },
+    { "id": "raider2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 1260, "y": 1430, "dir": [-1, 0] },
+    { "id": "patrolW", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 1300, "y": 420, "patrol": [[1300, 420], [1300, 900]] },
+    { "id": "bridgeSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 2080, "y": 1080, "dir": [-1, 0] },
+    { "id": "bridgeSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 2120, "y": 1450, "dir": [-1, 0] },
+    { "id": "patrolE", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 2650, "y": 1000, "patrol": [[2650, 1000], [2900, 1500], [2600, 1550]] },
+    { "id": "campSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 2650, "y": 700, "dir": [-1, 0] },
+    { "id": "guard1", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 2950, "y": 480, "dir": [-1, 0] },
+    { "id": "guard2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 3170, "y": 640, "dir": [0, 1] },
+    { "id": "guard3", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 3380, "y": 460, "dir": [-1, 0] }
   ],
   "general": {
     "id": "boss",
@@ -68,12 +69,65 @@
     "x": 3170,
     "y": 430,
     "dir": [-1, 0],
-    "hp": 120,
+    "hp": 180,
     "attack": 4,
     "guards": ["guard1", "guard2", "guard3"]
   },
   "events": [
-    { "id": "start", "when": { "time": 0 }, "do": [{ "dialog": "start" }] },
+    {
+      "id": "start",
+      "when": { "time": 0 },
+      "do": [
+        { "dialog": "start" },
+        {
+          "spawn": [
+            { "id": "wave1North", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 350, "y": 150, "route": [[350, 150], [300, 700], [380, 1450]], "speed": 55, "alertRadius": 350 },
+            { "id": "wave1South", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 700, "y": 2250, "route": [[700, 2250], [560, 2000]], "speed": 30, "alertRadius": 350 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wave2",
+      "when": { "squadsWiped": ["wave1North", "wave1South"] },
+      "do": [
+        { "banner": "野盗の つぎの 部隊が 来る！" },
+        {
+          "spawn": [
+            { "id": "wave2West", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 150, "y": 1300, "route": [[150, 1300], [250, 1550]], "speed": 40, "alertRadius": 350 },
+            { "id": "wave2South", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 1000, "y": 2250, "route": [[1000, 2250], [700, 1950]], "speed": 45, "alertRadius": 350 },
+            { "id": "wave2North", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 700, "y": 150, "route": [[700, 150], [650, 700], [560, 1500]], "speed": 60, "alertRadius": 350 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wave3",
+      "when": { "squadsWiped": ["wave2West", "wave2South", "wave2North"] },
+      "do": [
+        { "banner": "野盗の 隊長が 来た！" },
+        {
+          "spawn": [
+            { "id": "wave3Captain", "side": "enemy", "mode": "hold", "kind": "sword", "count": 15, "x": 1600, "y": 2000, "route": [[1600, 2000], [1000, 1850], [650, 1850]], "speed": 50, "alertRadius": 350, "leader": { "name": "野盗の隊長" } },
+            { "id": "wave3Spear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 150, "y": 2250, "route": [[150, 2250], [250, 2000]], "speed": 40, "alertRadius": 350 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "village",
+      "when": { "squadsWiped": ["wave3Captain", "wave3Spear"] },
+      "do": [
+        { "dialog": "village" },
+        { "objective": "もくてき：川の むこうの 野盗の 陣へ" },
+        {
+          "march": [
+            { "squad": "jikeidan", "route": [[700, 1700], [1180, 1440], [1550, 1250]] },
+            { "squad": "kikori", "route": [[600, 1300], [1000, 700], [1250, 660]] }
+          ]
+        }
+      ]
+    },
     {
       "id": "raid",
       "when": { "heroIn": { "x": 1840, "y": 700, "w": 900, "h": 1100 }, "squadsWiped": ["bridgeSword", "bridgeSpear"] },
@@ -81,15 +135,41 @@
         { "dialog": "mid" },
         {
           "spawn": [
-            { "id": "raidCav1", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2350, "y": 2330, "route": [[2350, 2330], [2150, 1600], [2000, 1300]], "speed": 90, "alertRadius": 350 },
-            { "id": "raidCav2", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2650, "y": 2300, "route": [[2650, 2300], [2350, 1650], [2150, 1350]], "speed": 90, "alertRadius": 350 },
-            { "id": "raidSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 3500, "y": 1750, "route": [[3500, 1750], [2900, 1550], [2350, 1350]], "speed": 70, "alertRadius": 350 },
-            { "id": "tonarimura", "side": "ally", "mode": "hold", "kind": "spear", "count": 10, "x": 900, "y": 2330, "route": [[900, 2330], [1450, 1600], [1650, 1205], [1860, 1205], [2050, 1420]], "speed": 90, "alertRadius": 350, "leader": { "name": "となり村の村長" } }
+            { "id": "raidCav1", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 12, "x": 2350, "y": 2250, "route": [[2350, 2250], [2150, 1600], [2000, 1300]], "speed": 90, "alertRadius": 350 },
+            { "id": "raidCav2", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 12, "x": 2650, "y": 2250, "route": [[2650, 2250], [2350, 1650], [2150, 1350]], "speed": 90, "alertRadius": 350 },
+            { "id": "raidSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 3450, "y": 1750, "route": [[3450, 1750], [2900, 1550], [2350, 1350]], "speed": 70, "alertRadius": 350 },
+            { "id": "tonarimura", "side": "ally", "mode": "hold", "kind": "spear", "count": 12, "x": 900, "y": 2250, "route": [[900, 2250], [1450, 1600], [1650, 1205], [1860, 1205], [2050, 1420]], "speed": 90, "alertRadius": 350, "leader": { "name": "となり村の村長" } }
           ]
         }
       ]
     },
-    { "id": "boss", "when": { "generalAlert": true }, "do": [{ "dialog": "general" }] },
+    {
+      "id": "boss",
+      "when": { "generalAlert": true },
+      "do": [
+        { "dialog": "general" },
+        { "objective": "" },
+        {
+          "spawn": [
+            { "id": "campHelp1", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 3450, "y": 1000, "route": [[3450, 1000], [3300, 700]], "speed": 60, "alertRadius": 350 },
+            { "id": "campHelp2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 3450, "y": 150, "route": [[3450, 150], [3350, 330]], "speed": 60, "alertRadius": 350 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campHelp",
+      "when": { "after": { "event": "boss", "seconds": 40 } },
+      "do": [
+        { "banner": "野盗の 援軍が 来た！" },
+        {
+          "spawn": [
+            { "id": "campHelp3", "side": "enemy", "mode": "hold", "kind": "sword", "count": 12, "x": 2700, "y": 150, "route": [[2700, 150], [2950, 380]], "speed": 60, "alertRadius": 350 },
+            { "id": "campHelp4", "side": "enemy", "mode": "hold", "kind": "spear", "count": 12, "x": 3450, "y": 1100, "route": [[3450, 1100], [3250, 800]], "speed": 60, "alertRadius": 350 }
+          ]
+        }
+      ]
+    },
     { "id": "clear", "when": { "generalDead": true }, "do": [{ "dialog": "clear" }, { "victory": true }] }
   ]
 }

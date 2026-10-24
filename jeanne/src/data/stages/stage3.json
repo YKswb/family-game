@@ -3,9 +3,10 @@
   "title": "オルレアン解放",
   "subtitle": "1429年5月　オルレアン",
   "width": 3600,
-  "height": 2800,
+  "height": 4200,
   "groundColor": "#6fb352",
   "enemyRetreat": true,
+  "objective": "もくてき：サン・ルーの 砦の 敵を たおせ",
   "terrain": {
     "rivers": [
       { "x": 0, "y": 0, "w": 1300, "h": 900 },
@@ -25,46 +26,50 @@
       { "x": 800, "y": 2500, "r": 130 },
       { "x": 3100, "y": 2400, "r": 140 },
       { "x": 380, "y": 1650, "r": 100 },
-      { "x": 3300, "y": 1650, "r": 110 }
+      { "x": 3300, "y": 1650, "r": 110 },
+      { "x": 450, "y": 3750, "r": 140 },
+      { "x": 3250, "y": 3950, "r": 140 },
+      { "x": 900, "y": 3000, "r": 120 },
+      { "x": 2350, "y": 2950, "r": 110 }
     ],
     "roads": [
-      [[1800, 2600], [1800, 1800], [1800, 910]],
-      [[600, 1300], [1800, 1350], [3000, 1300]]
+      [[1800, 4050], [1800, 2600], [1800, 1800], [1800, 910]],
+      [[600, 1300], [1800, 1350], [3000, 1300]],
+      [[1800, 3600], [2400, 3450], [2950, 3300]]
     ],
     "houses": [],
-    "tents": [{ "x": 1550, "y": 2700 }, { "x": 2050, "y": 2700 }, { "x": 1400, "y": 2560 }, { "x": 2200, "y": 2560 }]
+    "tents": [
+      { "x": 1550, "y": 4080 }, { "x": 2050, "y": 4080 }, { "x": 1350, "y": 3950 }, { "x": 2250, "y": 3950 },
+      { "x": 2800, "y": 3000 }, { "x": 3150, "y": 3050 }, { "x": 2950, "y": 2900 },
+      { "x": 1550, "y": 2700 }, { "x": 2050, "y": 2700 }
+    ]
   },
   "start": {
-    "hero": { "x": 1800, "y": 2550, "dir": [0, -1] },
-    "jeanne": { "x": 1800, "y": 2590 }
+    "hero": { "x": 1800, "y": 3900, "dir": [0, -1] },
+    "jeanne": { "x": 1800, "y": 3940 }
   },
   "squads": [
+    { "id": "southSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 1250, "y": 3650 },
+    { "id": "southArcher", "side": "ally", "mode": "neutral", "kind": "archer", "count": 10, "x": 2250, "y": 3650 },
     { "id": "flagSword", "side": "ally", "mode": "neutral", "kind": "sword", "count": 10, "x": 1000, "y": 2280 },
     { "id": "flagSpear", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 2550, "y": 2280 },
     { "id": "flagArcher", "side": "ally", "mode": "neutral", "kind": "archer", "count": 10, "x": 1500, "y": 2150 },
     { "id": "flagCavalry", "side": "ally", "mode": "neutral", "kind": "cavalry", "count": 10, "x": 600, "y": 1950 },
     { "id": "flagSpear2", "side": "ally", "mode": "neutral", "kind": "spear", "count": 10, "x": 3000, "y": 1950 },
 
-    { "id": "gilles", "side": "ally", "mode": "hold", "kind": "sword", "count": 10, "x": 1250, "y": 2600, "dir": [0, -1], "route": [[1250, 2600], [1300, 1800], [1650, 1150]], "speed": 40, "leader": { "name": "ジル・ド・レ", "hp": 50, "attack": 4 } },
-    { "id": "laHire", "side": "ally", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2650, "y": 2600, "dir": [0, -1], "route": [[2650, 2600], [2500, 1900], [2000, 1180]], "speed": 45, "leader": { "name": "ラ・イール", "hp": 50, "attack": 4 } },
+    { "id": "gilles", "side": "ally", "mode": "hold", "kind": "sword", "count": 12, "x": 1450, "y": 3850, "dir": [0, -1], "speed": 45, "leader": { "name": "ジル・ド・レ", "hp": 75, "attack": 4 } },
+    { "id": "laHire", "side": "ally", "mode": "hold", "kind": "cavalry", "count": 12, "x": 2150, "y": 3850, "dir": [0, -1], "speed": 50, "leader": { "name": "ラ・イール", "hp": 75, "attack": 4 } },
+    { "id": "dunois", "side": "ally", "mode": "hold", "kind": "spear", "count": 12, "x": 1100, "y": 3950, "dir": [0, -1], "speed": 45, "leader": { "name": "デュノワ", "hp": 75, "attack": 4 } },
+    { "id": "citizens", "side": "ally", "mode": "hold", "kind": "sword", "count": 12, "x": 2500, "y": 3950, "dir": [0, -1], "speed": 45, "leader": { "name": "町の兵の隊長" } },
 
-    { "id": "dunois", "side": "ally", "mode": "hold", "kind": "spear", "count": 10, "x": 450, "y": 2450, "dir": [0, -1], "route": [[450, 2450], [600, 1850], [1000, 1550], [1500, 1150]], "speed": 40, "leader": { "name": "デュノワ", "hp": 50, "attack": 4 } },
-    { "id": "citizens", "side": "ally", "mode": "hold", "kind": "sword", "count": 10, "x": 3250, "y": 2500, "dir": [0, -1], "route": [[3250, 2500], [3000, 1850], [2450, 1550], [2150, 1150]], "speed": 40, "leader": { "name": "町の兵の隊長" } },
+    { "id": "stLoupCaptain", "side": "enemy", "mode": "hold", "kind": "sword", "count": 15, "x": 3050, "y": 3200, "dir": [-1, 0], "leader": { "name": "サン・ルーの隊長" } },
+    { "id": "stLoupSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 15, "x": 2750, "y": 3300, "dir": [-1, 0] },
+    { "id": "stLoupArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 15, "x": 2950, "y": 3450, "dir": [-1, 0] },
+    { "id": "westCav", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 18, "x": 600, "y": 3300, "patrol": [[600, 3300], [1400, 3300]], "speed": 60 },
 
-    { "id": "roadSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 1800, "y": 1800, "dir": [0, 1] },
-    { "id": "augArcher2", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 1000, "y": 1100, "dir": [0, 1] },
-    { "id": "augArcher3", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 2600, "y": 1100, "dir": [0, 1] },
-    { "id": "augSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 1200, "y": 1500, "dir": [0, 1] },
-    { "id": "augSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 8, "x": 2400, "y": 1500, "dir": [0, 1] },
-    { "id": "augArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 1800, "y": 1420, "dir": [0, 1] },
-    { "id": "cavPatrol", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 700, "y": 1250, "patrol": [[700, 1250], [2900, 1250]], "speed": 70 },
-    { "id": "augSpear2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 8, "x": 750, "y": 1550, "dir": [0, 1] },
-    { "id": "augCavalry", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 8, "x": 2900, "y": 1550, "dir": [0, 1] },
-    { "id": "gateSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 10, "x": 1680, "y": 1020, "dir": [0, 1] },
-    { "id": "gateSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 10, "x": 1940, "y": 1040, "dir": [0, 1] },
-    { "id": "innerSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 10, "x": 1550, "y": 560, "dir": [0, 1] },
-    { "id": "innerSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 10, "x": 2050, "y": 560, "dir": [0, 1] },
-    { "id": "innerArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 8, "x": 1800, "y": 730, "dir": [0, 1] }
+    { "id": "innerSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 15, "x": 1550, "y": 560, "dir": [0, 1] },
+    { "id": "innerSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 15, "x": 2050, "y": 560, "dir": [0, 1] },
+    { "id": "innerArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 15, "x": 1800, "y": 730, "dir": [0, 1] }
   ],
   "general": {
     "id": "glasdale",
@@ -72,24 +77,109 @@
     "x": 1800,
     "y": 420,
     "dir": [0, 1],
-    "hp": 180,
-    "attack": 5,
+    "hp": 240,
+    "attack": 4,
     "guards": ["innerSword", "innerSpear", "innerArcher"]
   },
   "events": [
-    { "id": "start", "when": { "time": 0 }, "do": [{ "dialog": "start" }] },
+    {
+      "id": "start",
+      "when": { "time": 0 },
+      "do": [
+        { "dialog": "start" },
+        { "march": [
+          { "squad": "gilles", "route": [[1500, 3600], [2450, 3350]] },
+          { "squad": "laHire", "route": [[2300, 3700], [2700, 3550]] },
+          { "squad": "citizens", "route": [[2800, 3750], [3150, 3650]] },
+          { "squad": "dunois", "route": [[1100, 3600], [1000, 3350]] }
+        ] }
+      ]
+    },
+    {
+      "id": "stLoupHelp",
+      "when": { "squadsWiped": ["stLoupCaptain", "stLoupSpear", "stLoupArcher"] },
+      "do": [
+        { "banner": "サン・ルーに 敵の 援軍が 来た！" },
+        {
+          "spawn": [
+            { "id": "stLoupHelpSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 18, "x": 3450, "y": 2700, "route": [[3450, 2700], [3050, 3200]], "speed": 60, "alertRadius": 400 },
+            { "id": "stLoupHelpCav", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 18, "x": 3450, "y": 3750, "route": [[3450, 3750], [3050, 3400]], "speed": 70, "alertRadius": 400 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stLoup",
+      "when": { "squadsWiped": ["stLoupHelpSword", "stLoupHelpCav"] },
+      "do": [
+        { "dialog": "stLoup" },
+        { "objective": "もくてき：オーギュスタンの 陣を やぶれ" },
+        {
+          "spawn": [
+            { "id": "augArcher2", "side": "enemy", "mode": "hold", "kind": "archer", "count": 18, "x": 1000, "y": 1100, "dir": [0, 1] },
+            { "id": "augArcher3", "side": "enemy", "mode": "hold", "kind": "archer", "count": 18, "x": 2600, "y": 1100, "dir": [0, 1] },
+            { "id": "augSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 18, "x": 1200, "y": 1500, "dir": [0, 1] },
+            { "id": "augSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 18, "x": 2400, "y": 1500, "dir": [0, 1] },
+            { "id": "augArcher", "side": "enemy", "mode": "hold", "kind": "archer", "count": 18, "x": 1800, "y": 1420, "dir": [0, 1] },
+            { "id": "augSpear2", "side": "enemy", "mode": "hold", "kind": "spear", "count": 18, "x": 750, "y": 1550, "dir": [0, 1] },
+            { "id": "augCavalry", "side": "enemy", "mode": "hold", "kind": "cavalry", "count": 18, "x": 2900, "y": 1550, "dir": [0, 1] },
+            { "id": "sortieA", "side": "enemy", "mode": "hold", "kind": "sword", "count": 18, "x": 1500, "y": 1150, "route": [[1500, 1150], [1500, 2100]], "speed": 50, "alertRadius": 400 },
+            { "id": "sortieB", "side": "enemy", "mode": "hold", "kind": "spear", "count": 18, "x": 2100, "y": 1150, "route": [[2100, 1150], [2100, 2100]], "speed": 50, "alertRadius": 400 }
+          ]
+        },
+        { "march": [
+          { "squad": "gilles", "route": [[1500, 2600], [1300, 1800], [1650, 1150]] },
+          { "squad": "laHire", "route": [[2400, 2600], [2500, 1900], [2000, 1180]] },
+          { "squad": "dunois", "route": [[800, 2800], [700, 1850], [1000, 1550], [1500, 1150]] },
+          { "squad": "citizens", "route": [[2800, 2650], [3000, 1850], [2450, 1550], [2150, 1150]] }
+        ] }
+      ]
+    },
+    {
+      "id": "augustins",
+      "when": { "squadsWiped": ["augSpear", "augSword", "augArcher", "augSpear2", "augCavalry", "sortieA", "sortieB"] },
+      "do": [
+        { "objective": "もくてき：門の まえの 敵を たおして 門を ひらけ" },
+        { "banner": "門の まえに 敵が あつまってきた！" },
+        {
+          "spawn": [
+            { "id": "gateSword", "side": "enemy", "mode": "hold", "kind": "sword", "count": 18, "x": 1450, "y": 1150, "route": [[1450, 1150], [1680, 1020]], "speed": 50, "dir": [0, 1] },
+            { "id": "gateSpear", "side": "enemy", "mode": "hold", "kind": "spear", "count": 18, "x": 2150, "y": 1150, "route": [[2150, 1150], [1940, 1040]], "speed": 50, "dir": [0, 1] }
+          ]
+        }
+      ]
+    },
     { "id": "gateHint", "when": { "heroIn": { "x": 1450, "y": 900, "w": 700, "h": 350 } }, "do": [{ "banner": "門の まえの 敵を たおすと 門が ひらく！" }] },
-    { "id": "gate", "when": { "squadsWiped": ["gateSword", "gateSpear"] }, "do": [
+    {
+      "id": "gate",
+      "when": { "squadsWiped": ["gateSword", "gateSpear"] },
+      "do": [
         { "openGate": "tourelles" },
         { "dialog": "gate" },
+        { "objective": "" },
         { "march": [
           { "squad": "gilles", "route": [[1760, 1000], [1760, 780], [1600, 620]] },
           { "squad": "laHire", "route": [[1840, 1000], [1840, 780], [2000, 620]] },
           { "squad": "dunois", "route": [[1770, 1000], [1700, 780], [1450, 700]] },
           { "squad": "citizens", "route": [[1830, 1000], [1900, 780], [2150, 700]] }
         ] }
-      ] },
-    { "id": "arrow", "when": { "after": { "event": "gate", "seconds": 12 } }, "do": [{ "dialog": "arrow" }, { "jeanne": "leave" }] },
+      ]
+    },
+    {
+      "id": "arrow",
+      "when": { "after": { "event": "gate", "seconds": 12 } },
+      "do": [
+        { "dialog": "arrow" },
+        { "jeanne": "leave" },
+        { "banner": "砦から 敵が うって出た！ ジャンヌが もどるまで もちこたえろ！" },
+        {
+          "spawn": [
+            { "id": "fortSortieA", "side": "enemy", "mode": "hold", "kind": "sword", "count": 18, "x": 1500, "y": 420, "route": [[1500, 420], [1800, 780], [1800, 1150]], "speed": 50, "alertRadius": 400 },
+            { "id": "fortSortieB", "side": "enemy", "mode": "hold", "kind": "spear", "count": 18, "x": 2100, "y": 420, "route": [[2100, 420], [1800, 780], [1800, 1150]], "speed": 50, "alertRadius": 400 }
+          ]
+        }
+      ]
+    },
     { "id": "back", "when": { "after": { "event": "arrow", "seconds": 30 } }, "do": [{ "dialog": "back" }, { "jeanne": "return" }, { "rally": { "seconds": 40, "bonus": 0.3 } }] },
     { "id": "boss", "when": { "generalAlert": true }, "do": [{ "dialog": "general" }] },
     { "id": "clear", "when": { "generalDead": true }, "do": [{ "dialog": "clear" }, { "victory": true }] }

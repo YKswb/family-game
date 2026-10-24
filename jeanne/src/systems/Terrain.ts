@@ -137,6 +137,37 @@ export class Terrain {
   }
 
   /**
+   * 橋も門もない壁（城の建物など）は、角を回って向こうへ行く。
+   * 門のある壁（閉じている門を含む）は回らない（砦は門からしか入れない）
+   */
+  private aroundCorner(group: number, ax: number, ay: number, bx: number, by: number): { x: number; y: number } {
+    const rects = this.blockers.filter((b) => this.groupOf.get(b) === group);
+    if (this.gates.some((g) => rects.some((r) => touches(g.rect, r, 0)))) return { x: bx, y: by };
+    const m = 30;
+    const x0 = Math.min(...rects.map((r) => r.x)) - m;
+    const y0 = Math.min(...rects.map((r) => r.y)) - m;
+    const x1 = Math.max(...rects.map((r) => r.x + r.w)) + m;
+    const y1 = Math.max(...rects.map((r) => r.y + r.h)) + m;
+    let best: { x: number; y: number } | null = null;
+    let bestCost = Infinity;
+    for (const c of [
+      { x: x0, y: y0 },
+      { x: x1, y: y0 },
+      { x: x0, y: y1 },
+      { x: x1, y: y1 },
+    ]) {
+      // すでに角のそばにいるなら、その角は目指さない（次の角か行き先へ）
+      if (Math.hypot(c.x - ax, c.y - ay) < 40 || this.segmentBlocked(ax, ay, c.x, c.y)) continue;
+      const cost = Math.hypot(c.x - ax, c.y - ay) + Math.hypot(bx - c.x, by - c.y);
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = c;
+      }
+    }
+    return best ?? { x: bx, y: by };
+  }
+
+  /**
    * a から b へ向かうとき、いま目指すべき地点。まっすぐ行けるなら b、
    * 川や壁をまたぐなら、遠回りが一番少ない橋・門の手前 → 向こう側 の順に目指す
    */
@@ -175,7 +206,7 @@ export class Terrain {
         best = { entry, exit, onIt: inside(p, ax, ay) };
       }
     }
-    if (!best) return { x: bx, y: by };
+    if (!best) return this.aroundCorner(group, ax, ay, bx, by);
     // 橋の上にいるか、橋の手前まで来たら、向こう側へ
     if (best.onIt || Math.hypot(best.entry.x - ax, best.entry.y - ay) < 24) return best.exit;
     return best.entry;

@@ -138,16 +138,24 @@ describe('戦場での成長と難易度', () => {
     expect(w.hero.attack).toBeCloseTo(atk + 0.3);
   });
 
-  it('難易度で敵の人数とHPが変わる（かんたん 0.8倍、むずかしい 1.25倍）', () => {
+  it('難易度で敵の人数とHPが変わる（倍率は difficulty.json）', () => {
     const easy = new World({ ...stageConfig(stage, 1), difficulty: DIFFICULTY.easy });
     const hard = new World({ ...stageConfig(stage, 1), difficulty: DIFFICULTY.hard });
     const normal = new World({ ...stageConfig(stage, 1), difficulty: DIFFICULTY.normal });
+    const base = stage.squads.find((s) => s.id === 'raider1')!.count;
     const n = (w: World) => w.squadById('raider1')!.units.length;
-    expect([n(easy), n(normal), n(hard)]).toEqual([6, 8, 10]);
+    expect([n(easy), n(normal), n(hard)]).toEqual([
+      Math.round(base * DIFFICULTY.easy.enemyCount),
+      base,
+      Math.round(base * DIFFICULTY.hard.enemyCount),
+    ]);
+    expect(n(easy)).toBeLessThan(base);
+    expect(n(hard)).toBeGreaterThan(base);
     const hp = (w: World) => w.squadById('raider1')!.units[0].maxHp;
-    expect(hp(easy)).toBeCloseTo(4 * 0.8);
-    expect(hp(hard)).toBeCloseTo(4 * 1.25);
-    expect(hard.general!.maxHp).toBeCloseTo(120 * 1.25);
+    const swordHp = UNIT_DATA.kinds.sword.hp;
+    expect(hp(easy)).toBeCloseTo(swordHp * DIFFICULTY.easy.enemyHp);
+    expect(hp(hard)).toBeCloseTo(swordHp * DIFFICULTY.hard.enemyHp);
+    expect(hard.general!.maxHp).toBeCloseTo(stage.general!.hp * DIFFICULTY.hard.enemyHp);
   });
 
   it('むずかしいでは仲間が復活せず、全滅した部隊はそのまま消える', () => {

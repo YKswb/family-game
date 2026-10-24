@@ -88,6 +88,8 @@ export interface EventAction {
   openGate?: string;
   /** 画面のまんなかに案内を出す */
   banner?: string;
+  /** いまの目的を変える（HUD の最後の行。画面のまんなかにも出す。空にすると大将の護衛の数の表示にもどる） */
+  objective?: string;
   /** ジャンヌが戦場をはなれる／もどってくる */
   jeanne?: 'leave' | 'return';
   /** 味方が奮い立つ：しばらくのあいだ味方全員の攻撃が上がる */
@@ -138,7 +140,7 @@ export interface StageData {
   events: StageEvent[];
   /** 敵の部隊が、人数が減ると大将の方へ下がる */
   enemyRetreat?: boolean;
-  /** ステージの目的（HUD に出す。大将のいないステージ向け） */
+  /** はじめの目的（HUD に出す。イベントの objective で変わる） */
   objective?: string;
   /** 目的地（地面に印を出し、ミニマップに星を出す） */
   goal?: Rect;

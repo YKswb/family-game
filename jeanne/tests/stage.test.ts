@@ -66,10 +66,13 @@ describe.each(Object.keys(STAGES))('%s のデータ', (key) => {
     }
   });
 
-  it('敵の部隊は 8〜15 隊（援軍を含む。味方NPCを増やした分だけ増やした）', () => {
-    const enemies = allSquads.filter((s) => s.side === 'enemy').length;
-    expect(enemies).toBeGreaterThanOrEqual(8);
-    expect(enemies).toBeLessThanOrEqual(15);
+  // 10分前後遊べるよう、援軍の波を足した。はじめから置く敵は、同時にいる兵士が多くなりすぎないよう20隊まで
+  it('敵は援軍を含めて 8〜30 隊。はじめから置くのは 20 隊まで', () => {
+    const initial = stage.squads.filter((s) => s.side === 'enemy').length;
+    const all = allSquads.filter((s) => s.side === 'enemy').length;
+    expect(all).toBeGreaterThanOrEqual(8);
+    expect(all).toBeLessThanOrEqual(30);
+    expect(initial).toBeLessThanOrEqual(20);
   });
 });
 
@@ -179,18 +182,21 @@ describe('ステージ1の仕組み', () => {
 });
 
 // 自動プレイは GitHub Actions のマシンでは手元より数倍遅いので、制限時間を長めにする
-describe('ステージ1の自動プレイ', { timeout: 30000 }, () => {
+describe('ステージ1の自動プレイ', { timeout: 120000 }, () => {
   const survivors: number[] = [];
   it.each([1, 2, 3, 4])('最後まで通せる：会話が順に起き、大将を倒してクリア（seed %i）', (seed) => {
     const w = new World(stageConfig(STAGES.stage1.stage, seed));
     const s = runStageBot(w);
     expect(s.broken).toBeNull();
     expect(w.outcome).toBe('won');
-    expect(s.dialogs).toEqual(['start', 'mid', 'general', 'clear']);
+    // 村を守る波と、川の向こうの襲撃は、どちらが先でもよい
+    expect(s.dialogs[0]).toBe('start');
+    expect(s.dialogs.at(-1)).toBe('clear');
+    expect([...s.dialogs].sort()).toEqual(['clear', 'general', 'mid', 'start', 'village']);
     expect(s.recruited).toBeGreaterThanOrEqual(4);
     survivors.push(w.countFollowing());
-    // ボットは子どもより速いので、10分よりずっと短く終わる
-    expect(s.seconds).toBeLessThan(600);
+    // 10分前後遊べるよう長くした。ボットは子どもより速いので、15分より短く終わる
+    expect(s.seconds).toBeLessThan(900);
   });
 
   it('待機の部隊から補充できるので、大将を倒すころにも仲間が残っている（4回の平均で8人以上）', () => {
